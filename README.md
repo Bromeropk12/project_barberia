@@ -1,17 +1,15 @@
-# 🎓 Sistema de Gestión de Usuarios - UAN Barber
+# ✂️ Sistema de Reservas de Barbería - UAN Barber
 
-Una aplicación web completa para la gestión de usuarios de una barbería, desarrollada con tecnologías modernas y un enfoque educativo.
+Una aplicación web completa para gestión de barbería con sistema de reservas en línea, desarrollada con tecnologías modernas.
 
-##  ¿Qué es este proyecto?
+## 🚀 ¿Qué es este proyecto?
 
-Este es un sistema full-stack que combina una atractiva landing page de barbería con un panel administrativo para gestionar usuarios. Fue creado como proyecto educativo para aprender desarrollo web moderno, implementando operaciones CRUD (Crear, Leer, Eliminar) sobre una base de datos PostgreSQL.
-
-### Características principales:
-- **Landing page moderna** con tema de barbería
-- **Sistema de login** para acceso administrativo credenciales: usuario:elsuperadmin password:yoeladmin852
-- **Gestión completa de usuarios** (CRUD)
-- **IDs consecutivos automáticos** sin huecos
-- **Interfaz responsiva** y amigable
+Sistema full-stack que incluye:
+- **Landing page moderna** con servicios y barberos
+- **Sistema de reservas** con horarios en tiempo real
+- **Panel administrativo** completo para gestión
+- **Autenticación con roles** (cliente, barbero, admin)
+- **Notificaciones por email** y recordatorios automáticos
 
 ##  Arquitectura del Sistema
 
@@ -39,23 +37,18 @@ Este es un sistema full-stack que combina una atractiva landing page de barberí
 - Diseño moderno con imágenes temáticas
 - Botón de acceso al panel administrativo
 
-### 2. **Sistema de Autenticación**
-- Modal de login con credenciales específicas
-- Usuario: `elsuperadmin`
-- Contraseña: `yoeladmin852`
-- Acceso seguro al panel de administración
+### 2. **Sistema de Reservas**
+- Registro/login de clientes
+- Selección de servicio y barbero disponible
+- Visualización de horarios en tiempo real (slots de 30 min)
+- Confirmación con notificación por email
 
 ### 3. **Panel Administrativo**
-- **Vista de usuarios registrados** en tarjetas ordenadas
-- **Formulario de registro** con validación completa
-- **Eliminación de usuarios** con confirmación
-- **IDs automáticos** consecutivos (ej: 0001, 0002, 0003...)
-
-### 4. **Gestión de IDs**
-- Los IDs se asignan automáticamente sin intervención manual
-- Mantienen secuencia consecutiva sin huecos
-- Formato de 4 dígitos (expansible hasta 7)
-- Si eliminas el usuario 0003, el siguiente será 0003
+- **Estadísticas**: Ingresos totales, reservas por mes, top barberos/servicios
+- **Gestión de barberos**: Crear, editar, desactivar perfiles
+- **Servicios**: CRUD completo con precios y duración
+- **Reservas**: Ver todas, cancelar, completar citas
+- **Usuarios**: Gestión de roles y permisos
 
 ## Estructura del Proyecto
 
@@ -108,48 +101,58 @@ npm run dev
 ```
 Aplicación corriendo en: `http://localhost:5173`
 
-## 🔌 API Endpoints
+## 🔌 API Endpoints Principales
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| GET | `/api/usuarios` | Obtener todos los usuarios |
-| POST | `/api/usuarios` | Crear nuevo usuario |
-| DELETE | `/api/usuarios/:id` | Eliminar usuario por ID |
+| POST | `/api/auth/login` | Autenticación de usuarios |
+| POST | `/api/auth/register` | Registro de nuevos clientes |
+| GET | `/api/servicios` | Listar servicios disponibles |
+| GET | `/api/barberos` | Listar barberos activos |
+| GET | `/api/horarios/:barberoId/:fecha` | Horarios disponibles |
+| POST | `/api/reservas` | Crear nueva reserva |
+| GET | `/api/reservas/mis` | Reservas del cliente |
+| GET | `/api/estadisticas` | Estadísticas (admin) |
 
-##  Características Técnicas
-
-### Validaciones Implementadas
-- **Campos obligatorios**: nombre, apellido, teléfono, email, contraseña
-- **Formato de email** válido
-- **Aceptación de términos** requerida
-- **Longitud mínima de contraseña** (6 caracteres)
-- **Correos únicos** en la base de datos
+## ⚙️ Características Técnicas
 
 ### Seguridad
-- **Hashing de contraseñas**: No implementado (proyecto educativo)
-- **Autenticación básica**: Credenciales hardcodeadas
-- **Validación de entrada**: En frontend y backend
-- **CORS configurado** para desarrollo local
+- **JWT Authentication** con expiración de 24h
+- **Hashing de contraseñas** con bcrypt (10 salt rounds)
+- **Roles de usuario**: cliente, barbero, super_admin
+- **Validación de entrada** en frontend y backend
+- **CORS configurado** para desarrollo
 
-### Diseño y UX
-- **Paleta de colores**: Azules y morados modernos
-- **Animaciones suaves**: Hover effects y transiciones
-- **Responsive design**: Adaptable a móviles y desktop
-- **Feedback visual**: Mensajes de éxito/error
+### Base de Datos
+- **PostgreSQL (Neon)** con índices optimizados
+- **Transacciones** para operaciones críticas
+- **Relaciones complejas** entre usuarios, reservas, servicios
+- **Horarios dinámicos** con slots de 30 minutos
 
-##  Conceptos Aprendidos
+### Notificaciones
+- **Emails automáticos** (confirmación, cancelación, recordatorios)
+- **Sistema de notificaciones web** integrado
+- **Recordatorios diarios** programados con node-cron
 
-Este proyecto educativo cubre:
-- Arquitectura full-stack separada
-- Consumo de APIs REST con Axios
-- Manejo de estado en React (useState, useEffect)
-- Operaciones CRUD completas
-- Configuración de bases de datos PostgreSQL (NEON)
-- Tipado con TypeScript
-- Estilos modernos con CSS3
-- Autenticación básica
-- Validación de formularios
-- IDs automáticos consecutivos
+### UI/UX
+- **Diseño moderno** con CSS3 y animaciones
+- **Completamente responsivo** para móviles y desktop
+- **Componentes reutilizables** con TypeScript
+- **Estados de carga** y manejo de errores
+
+## 📚 Conceptos Aprendidos
+
+Este proyecto avanzado cubre:
+- **Arquitectura full-stack** completa con separación de responsabilidades
+- **Autenticación JWT** con roles y permisos
+- **Gestión de estado compleja** en React con múltiples contextos
+- **APIs RESTful** con validación y middleware
+- **Base de datos relacional** con PostgreSQL y optimizaciones
+- **Sistema de notificaciones** (email y web)
+- **Programación de tareas** con node-cron
+- **Transacciones de BD** para integridad de datos
+- **UI/UX moderna** con componentes reutilizables
+- **TypeScript avanzado** con tipos complejos
 
 
 
