@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import './AuthModals.css'; // Reusing auth styles
+import './CreateBarberModal.css';
 
 interface CreateBarberModalProps {
     onClose: () => void;
@@ -24,10 +24,10 @@ export function CreateBarberModal({ onClose, onSubmit, loading }: CreateBarberMo
     };
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-content">
+        <div className="barber-modal-overlay">
+            <div className="barber-modal-content">
                 <h2>Registrar Nuevo Barbero</h2>
-                <form onSubmit={handleSubmit} className="login-form">
+                <form onSubmit={handleSubmit} className="barber-form">
                     <div className="form-group">
                         <label>Nombre Completo</label>
                         <input
@@ -101,7 +101,7 @@ export function CreateBarberModal({ onClose, onSubmit, loading }: CreateBarberMo
                         />
                     </div>
 
-                    <div className="modal-buttons">
+                    <div className="barber-modal-buttons">
                         <button type="button" onClick={onClose} className="btn-secondary" disabled={loading}>
                             Cancelar
                         </button>

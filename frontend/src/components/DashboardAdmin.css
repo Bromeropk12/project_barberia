@@ -54,7 +54,7 @@
     color: var(--accent-white);
 }
 
-/* Stats Grid */
+/* Stats Grid - DISEÑO LIMPIO Y SIMPLE */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -63,42 +63,44 @@
 }
 
 .stat-card {
-    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    border-radius: 20px;
-    padding: 32px;
+    background: rgba(30, 58, 95, 0.7);
+    border: 2px solid rgba(71, 125, 191, 0.5);
+    border-radius: 16px;
+    padding: 28px 20px;
     text-align: center;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 8px 20px rgba(30, 58, 95, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
 }
 
-.stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 120px;
-    height: 120px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-    border-radius: 50%;
-    transform: translate(30%, -30%);
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(71, 125, 191, 0.4);
+    border-color: rgba(71, 125, 191, 0.8);
 }
 
 .stat-value {
-    font-size: 2.8rem;
-    font-weight: 800;
-    color: var(--accent-white);
-    margin-bottom: 8px;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    font-size: 3.2rem;
+    font-weight: 900;
+    color: #FFFFFF;
+    margin: 0;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+    line-height: 1;
 }
 
 .stat-label {
-    font-size: 1rem;
-    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+    color: #FFFFFF;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1.2px;
     font-weight: 600;
+    margin: 0;
+    line-height: 1.3;
 }
 
 /* Lists para Admin */
@@ -196,6 +198,7 @@
     font-weight: 600;
 }
 
+/* Responsive */
 @media (max-width: 1024px) {
     .admin-tabs {
         flex-wrap: wrap;
@@ -221,5 +224,9 @@
 
     .admin-tabs {
         flex-direction: column;
+    }
+
+    .stat-value {
+        font-size: 2.5rem;
     }
 }

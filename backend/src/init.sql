@@ -84,9 +84,14 @@ CREATE TABLE IF NOT EXISTS notificaciones (
 CREATE INDEX IF NOT EXISTS idx_usuarios_stack_auth_id ON usuarios(stack_auth_id);
 CREATE INDEX IF NOT EXISTS idx_usuarios_rol ON usuarios(rol);
 CREATE INDEX IF NOT EXISTS idx_barberos_usuario_id ON barberos(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_barberos_estado ON barberos(estado);
 CREATE INDEX IF NOT EXISTS idx_horarios_barbero_fecha ON horarios(barbero_id, fecha);
+CREATE INDEX IF NOT EXISTS idx_horarios_fecha_disponible ON horarios(fecha, disponible);
 CREATE INDEX IF NOT EXISTS idx_reservas_usuario ON reservas(usuario_id);
 CREATE INDEX IF NOT EXISTS idx_reservas_barbero_fecha ON reservas(barbero_id, fecha_hora);
+CREATE INDEX IF NOT EXISTS idx_reservas_estado ON reservas(estado);
+CREATE INDEX IF NOT EXISTS idx_reservas_fecha_hora ON reservas(fecha_hora);
+CREATE INDEX IF NOT EXISTS idx_servicios_activo ON servicios(activo);
 CREATE INDEX IF NOT EXISTS idx_notificaciones_usuario ON notificaciones(usuario_id, leida);
 
 -- Datos iniciales

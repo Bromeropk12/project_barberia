@@ -66,7 +66,7 @@ export type AdminSubView = 'reservas' | 'barberos' | 'servicios' | 'estadisticas
 // Función helper para formatear fechas
 export const formatDate = (dateString: string) => {
     return new Intl.DateTimeFormat('es-CO', {
-        timeZone: 'America/New_York',
+        timeZone: 'America/Bogota',
         dateStyle: 'medium',
         timeStyle: 'short'
     }).format(new Date(dateString));

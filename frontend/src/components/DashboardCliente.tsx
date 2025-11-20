@@ -1,5 +1,6 @@
 // components/DashboardCliente.tsx - Enhanced Client Dashboard with Modern Components
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Reserva, User } from './types';
 import ModernMetrics from './ModernMetrics';
 import './DashboardCliente.css';
@@ -34,6 +35,7 @@ export function DashboardCliente({
     onReprogramar,
     onLogout
 }: DashboardClienteProps) {
+    const navigate = useNavigate();
     const [reservas, setReservas] = useState<Reserva[]>(initialReservas);
     const [loading, setLoading] = useState(initialLoading);
     const [activeFilter, setActiveFilter] = useState<'todas' | 'pendiente' | 'confirmada' | 'completada' | 'cancelada'>('todas');
@@ -135,13 +137,13 @@ export function DashboardCliente({
 
             {/* Quick Actions */}
             <div className="quick-actions slide-in-left">
-                <button className="quick-action-btn" onClick={() => window.location.href = '/nueva-reserva'}>
+                <button className="quick-action-btn" onClick={() => navigate('/reserva')}>
                     📅 Nueva Reserva
                 </button>
                 <button className="quick-action-btn" onClick={() => handleFilterChange('todas')}>
                     🔍 Ver Todas
                 </button>
-                <button className="quick-action-btn" onClick={() => window.location.href = '/servicios'}>
+                <button className="quick-action-btn" onClick={() => navigate('/reserva')}>
                     ✂️ Servicios
                 </button>
             </div>
@@ -183,7 +185,7 @@ export function DashboardCliente({
                             <div className="empty-icon">📅</div>
                             <h4>No hay reservas {activeFilter === 'todas' ? '' : activeFilter === 'confirmada' ? 'confirmadas' : activeFilter}</h4>
                             <p>{activeFilter === 'todas' ? 'Aún no has hecho ninguna reserva.' : `No tienes reservas ${activeFilter === 'confirmada' ? 'confirmadas' : activeFilter === 'pendiente' ? 'pendientes' : 'completadas'}.`}</p>
-                            <button className="quick-action-btn" onClick={() => window.location.href = '/nueva-reserva'}>
+                            <button className="quick-action-btn" onClick={() => navigate('/reserva')}>
                                 📅 Hacer Primera Reserva
                             </button>
                         </div>

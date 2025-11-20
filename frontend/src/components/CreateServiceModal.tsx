@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import './AuthModals.css';
+import './CreateServiceModal.css';
 
 interface CreateServiceModalProps {
     onClose: () => void;
@@ -21,10 +21,10 @@ export function CreateServiceModal({ onClose, onSubmit, loading }: CreateService
     };
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-content">
+        <div className="service-modal-overlay">
+            <div className="service-modal-content">
                 <h2>Crear Nuevo Servicio</h2>
-                <form onSubmit={handleSubmit} className="login-form">
+                <form onSubmit={handleSubmit} className="service-form">
                     <div className="form-group">
                         <label>Nombre del Servicio</label>
                         <input
@@ -68,7 +68,7 @@ export function CreateServiceModal({ onClose, onSubmit, loading }: CreateService
                         </div>
                     </div>
 
-                    <div className="modal-buttons">
+                    <div className="service-modal-buttons">
                         <button type="button" onClick={onClose} className="btn-secondary" disabled={loading}>
                             Cancelar
                         </button>

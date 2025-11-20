@@ -1,0 +1,209 @@
+/* CreateBarberModal.css */
+
+.barber-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    padding: 16px;
+    overflow-y: auto;
+}
+
+.barber-modal-content {
+    background: linear-gradient(145deg, var(--neutral-gray), var(--neutral-dark));
+    padding: 32px;
+    border-radius: 24px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+    max-width: 600px;
+    width: 100%;
+    border: 2px solid rgba(30, 58, 95, 0.3);
+    position: relative;
+    overflow: visible;
+    margin: auto;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.barber-modal-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-blue), var(--primary-blue-light));
+}
+
+.barber-modal-content h2 {
+    background: linear-gradient(135deg, var(--primary-blue-light), var(--accent-white));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 24px;
+    text-align: center;
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+
+.barber-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.barber-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.barber-form .form-group label {
+    color: var(--accent-white);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.barber-form .form-group input,
+.barber-form .form-group select {
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 2px solid rgba(30, 58, 95, 0.3);
+    background: var(--neutral-dark);
+    color: var(--accent-white);
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.barber-form .form-group input:focus,
+.barber-form .form-group select:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.2);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.barber-modal-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+}
+
+.barber-modal-buttons button {
+    flex: 1;
+    min-width: 120px;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.barber-modal-buttons .btn-secondary {
+    background: rgba(30, 58, 95, 0.3);
+    color: var(--accent-white);
+    border: 2px solid rgba(30, 58, 95, 0.5);
+}
+
+.barber-modal-buttons .btn-secondary:hover:not(:disabled) {
+    background: rgba(30, 58, 95, 0.5);
+    border-color: var(--primary-blue);
+}
+
+.barber-modal-buttons .btn-primary {
+    background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-light));
+    color: var(--accent-white);
+}
+
+.barber-modal-buttons .btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(30, 58, 95, 0.4);
+}
+
+.barber-modal-buttons button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .barber-modal-content {
+        padding: 24px;
+        max-height: 85vh;
+    }
+
+    .barber-modal-content h2 {
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .barber-modal-buttons {
+        flex-direction: column;
+    }
+
+    .barber-modal-buttons button {
+        width: 100%;
+        min-width: unset;
+    }
+}
+
+@media (max-width: 480px) {
+    .barber-modal-overlay {
+        padding: 8px;
+    }
+
+    .barber-modal-content {
+        padding: 20px;
+        border-radius: 16px;
+    }
+
+    .barber-modal-content h2 {
+        font-size: 1.25rem;
+    }
+
+    .barber-form .form-group input,
+    .barber-form .form-group select {
+        padding: 10px 12px;
+        font-size: 0.9rem;
+    }
+}
+
+/* Scrollbar personalizado para el modal */
+.barber-modal-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.barber-modal-content::-webkit-scrollbar-track {
+    background: var(--neutral-dark);
+    border-radius: 4px;
+}
+
+.barber-modal-content::-webkit-scrollbar-thumb {
+    background: var(--primary-blue);
+    border-radius: 4px;
+}
+
+.barber-modal-content::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-blue-light);
+}

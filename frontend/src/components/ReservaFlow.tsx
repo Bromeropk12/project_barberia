@@ -34,6 +34,13 @@ export function ReservaFlow({
     selectedHorario,
     selectedFecha
 }: ReservaFlowProps) {
+    const handleCancelar = () => {
+        if (window.confirm('¿Estás seguro de cancelar esta reserva? Se perderá toda la información.')) {
+            // Usar window.location para forzar recarga y limpiar estado
+            window.location.href = '/dashboard';
+        }
+    };
+
     return (
         <div className="reserva-flow">
             <h2>Nueva Reserva</h2>
@@ -41,7 +48,12 @@ export function ReservaFlow({
             {/* Paso 1: Seleccionar Servicio */}
             {!selectedServicio && (
                 <div className="step">
-                    <h3>1. Selecciona un Servicio</h3>
+                    <div className="step-header">
+                        <h3>1. Selecciona un Servicio</h3>
+                        <button onClick={handleCancelar} className="btn-secondary btn-sm">
+                            ❌ Cancelar
+                        </button>
+                    </div>
                     <div className="servicios-grid">
                         {loading ? (
                             <>
@@ -70,7 +82,12 @@ export function ReservaFlow({
             {/* Paso 2: Seleccionar Barbero */}
             {selectedServicio && !selectedBarbero && (
                 <div className="step">
-                    <h3>2. Selecciona un Barbero</h3>
+                    <div className="step-header">
+                        <h3>2. Selecciona un Barbero</h3>
+                        <button onClick={handleCancelar} className="btn-secondary btn-sm">
+                            ❌ Cancelar Reserva
+                        </button>
+                    </div>
                     <div className="barberos-grid">
                         {loading ? (
                             <>
@@ -97,7 +114,12 @@ export function ReservaFlow({
             {/* Paso 3: Seleccionar Fecha y Hora */}
             {selectedBarbero && !selectedHorario && (
                 <div className="step">
-                    <h3>3. Selecciona Fecha y Hora</h3>
+                    <div className="step-header">
+                        <h3>3. Selecciona Fecha y Hora</h3>
+                        <button onClick={handleCancelar} className="btn-secondary btn-sm">
+                            ❌ Cancelar Reserva
+                        </button>
+                    </div>
                     <input
                         type="date"
                         onChange={(e) => onLoadHorarios(e.target.value)}
@@ -134,13 +156,22 @@ export function ReservaFlow({
                         <p><strong>Hora:</strong> {selectedHorario.hora_inicio}</p>
                         <p><strong>Precio:</strong> ${selectedServicio.precio.toLocaleString()}</p>
                     </div>
-                    <button
-                        onClick={onConfirmar}
-                        disabled={loading}
-                        className="btn-primary btn-large"
-                    >
-                        {loading ? 'Procesando...' : 'Confirmar Reserva'}
-                    </button>
+                    <div className="action-buttons">
+                        <button
+                            onClick={handleCancelar}
+                            className="btn-secondary"
+                            disabled={loading}
+                        >
+                            ❌ Cancelar
+                        </button>
+                        <button
+                            onClick={onConfirmar}
+                            disabled={loading}
+                            className="btn-primary btn-large"
+                        >
+                            {loading ? 'Procesando...' : 'Confirmar Reserva'}
+                        </button>
+                    </div>
                 </div>
             )}
         </div>
