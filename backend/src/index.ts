@@ -8,7 +8,7 @@ import { enviarConfirmacionReserva, enviarCancelacionReserva } from './emailServ
 import { iniciarRecordatorios } from './reminderService';
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Middlewares
 app.use(cors()); // Permitir peticiones desde el frontend
