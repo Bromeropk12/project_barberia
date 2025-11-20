@@ -55,6 +55,8 @@ interface Horario {
   disponible: boolean;
 }
 
+type AdminSubView = 'reservas' | 'barberos' | 'servicios';
+
 // Configurar axios para incluir token JWT
 axios.interceptors.request.use((config) => {
   const token = localStorage.getItem('auth_token');
@@ -63,6 +65,15 @@ axios.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Función para formatear fechas en zona horaria America/New York
+const formatDate = (dateString: string) => {
+  return new Intl.DateTimeFormat('es-CO', {
+    timeZone: 'America/New_York',
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  }).format(new Date(dateString));
+};
 
 function App() {
   // Estados globales
@@ -84,13 +95,18 @@ function App() {
   const [selectedFecha, setSelectedFecha] = useState<string>('');
 
   // Estados para sub-vistas
-  const [adminSubView, setAdminSubView] = useState<string>('reservas');
+  const [adminSubView, setAdminSubView] = useState<AdminSubView>('reservas');
 
   // Estados para login/registro
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [registerData, setRegisterData] = useState({
     nombre: '', apellido: '', telefono: '', email: '', password: '', confirmPassword: ''
   });
+
+  // Cargar datos para landing
+  useEffect(() => {
+    loadLandingData();
+  }, []);
 
   // Verificar autenticación al cargar
   useEffect(() => {
@@ -114,6 +130,19 @@ function App() {
     } catch (err) {
       localStorage.removeItem('auth_token');
       setCurrentUser(null);
+    }
+  };
+
+  const loadLandingData = async () => {
+    try {
+      const [serviciosRes, barberosRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/servicios`),
+        axios.get(`${API_BASE_URL}/barberos`)
+      ]);
+      setServicios(serviciosRes.data);
+      setBarberos(barberosRes.data);
+    } catch (err) {
+      console.error('Error cargando datos de landing:', err);
     }
   };
 
@@ -380,6 +409,19 @@ function App() {
                   <div key={servicio.id} className="servicio-card">
                     <h4>{servicio.nombre}</h4>
                     <p>${servicio.precio}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="barberos-preview">
+              <h3>Nuestros Barberos</h3>
+              <div className="barberos-grid">
+                {barberos.slice(0, 3).map(barbero => (
+                  <div key={barbero.id} className="barbero-card">
+                    <h4>{barbero.nombre} {barbero.apellido}</h4>
+                    <p>Experiencia: {barbero.experiencia_anios} años</p>
+                    <p>Estado: {barbero.estado}</p>
                   </div>
                 ))}
               </div>
