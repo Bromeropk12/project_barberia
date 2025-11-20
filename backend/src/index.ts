@@ -691,27 +691,34 @@ app.post('/api/reservas', authenticateToken, async (req: Request, res: Response)
       const slotTime = new Date(fecha_hora);
       slotTime.setMinutes(slotTime.getMinutes() + i * 30);
       const slotDate = slotTime.toISOString().split('T')[0];
-      const slotTimeStr = slotTime.toISOString().split('T')[1].split('.')[0];
+      const slotTimeStr = slotTime.toTimeString().substring(0, 8);
 
-      // Verificar horario disponible
+      console.log(`Checking slot ${i + 1}: barbero_id=${barbero_id}, slotDate=${slotDate}, slotTimeStr=${slotTimeStr}`);
+
+      // Verificar que el horario existe en la tabla
       const horarioCheck = await pool.query(`
         SELECT h.* FROM horarios h
         WHERE h.barbero_id = $1 AND h.fecha = $2
         AND h.hora_inicio <= $3::time AND h.hora_fin > $3::time
-        AND h.disponible = true
       `, [barbero_id, slotDate, slotTimeStr]);
 
+      console.log(`horarioCheck rows: ${horarioCheck.rows.length}`);
+
       if (horarioCheck.rows.length === 0) {
-        return res.status(409).json({ error: `Horario no disponible para el slot ${i + 1} del servicio` });
+        console.log('No horario found for slot', i + 1);
+        return res.status(409).json({ error: `Horario no existe para el slot ${i + 1} del servicio` });
       }
 
-      // Verificar que no hay reserva en este slot
+      // Verificar que no hay reserva activa en este slot
       const reservaCheck = await pool.query(
-        'SELECT * FROM reservas WHERE barbero_id = $1 AND fecha_hora = $2 AND estado != $3',
-        [barbero_id, slotTime.toISOString(), 'cancelada']
+        'SELECT * FROM reservas WHERE barbero_id = $1 AND fecha_hora = $2 AND estado IN ($3, $4)',
+        [barbero_id, slotTime.toISOString(), 'pendiente', 'confirmada']
       );
 
+      console.log(`reservaCheck rows: ${reservaCheck.rows.length}`);
+
       if (reservaCheck.rows.length > 0) {
+        console.log('Conflicting reservation found for slot', i + 1);
         return res.status(409).json({ error: `Ya existe una reserva en el slot ${i + 1} del servicio` });
       }
 
