@@ -2,7 +2,7 @@
 
 Una aplicación web completa para la gestión de usuarios de una barbería, desarrollada con tecnologías modernas y un enfoque educativo.
 
-## 📋 ¿Qué es este proyecto?
+##  ¿Qué es este proyecto?
 
 Este es un sistema full-stack que combina una atractiva landing page de barbería con un panel administrativo para gestionar usuarios. Fue creado como proyecto educativo para aprender desarrollo web moderno, implementando operaciones CRUD (Crear, Leer, Eliminar) sobre una base de datos PostgreSQL.
 
@@ -13,7 +13,7 @@ Este es un sistema full-stack que combina una atractiva landing page de barberí
 - **IDs consecutivos automáticos** sin huecos
 - **Interfaz responsiva** y amigable
 
-## 🏗️ Arquitectura del Sistema
+##  Arquitectura del Sistema
 
 ### Tecnologías utilizadas:
 
@@ -31,7 +31,7 @@ Este es un sistema full-stack que combina una atractiva landing page de barberí
 - **Axios** - Cliente HTTP para API calls
 - **CSS3** - Estilos modernos con diseño responsivo
 
-## 🔄 Cómo funciona
+##  Cómo funciona
 
 ### 1. **Landing Page**
 - Página de presentación de la barbería UAN Barber
@@ -116,7 +116,7 @@ Aplicación corriendo en: `http://localhost:5173`
 | POST | `/api/usuarios` | Crear nuevo usuario |
 | DELETE | `/api/usuarios/:id` | Eliminar usuario por ID |
 
-## ✨ Características Técnicas
+##  Características Técnicas
 
 ### Validaciones Implementadas
 - **Campos obligatorios**: nombre, apellido, teléfono, email, contraseña
@@ -137,7 +137,7 @@ Aplicación corriendo en: `http://localhost:5173`
 - **Responsive design**: Adaptable a móviles y desktop
 - **Feedback visual**: Mensajes de éxito/error
 
-## 🎯 Conceptos Aprendidos
+##  Conceptos Aprendidos
 
 Este proyecto educativo cubre:
 - Arquitectura full-stack separada
