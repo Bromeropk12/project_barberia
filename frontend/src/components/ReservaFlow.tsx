@@ -128,17 +128,19 @@ export function ReservaFlow({
                     />
                     {selectedFecha && (
                         <div className="horarios-grid">
-                            {horarios.filter(h => h.disponible).map(horario => (
-                                <button
-                                    key={horario.id}
-                                    onClick={() => onSelectHorario(horario)}
-                                    className="horario-slot"
-                                >
-                                    {horario.hora_inicio} - {horario.hora_fin}
-                                </button>
-                            ))}
-                            {horarios.filter(h => h.disponible).length === 0 && (
-                                <p>No hay horarios disponibles para esta fecha</p>
+                            {horarios.length > 0 ? (
+                                horarios.map(horario => (
+                                    <button
+                                        key={horario.id}
+                                        onClick={() => horario.disponible && onSelectHorario(horario)}
+                                        className={`horario-slot ${horario.disponible ? 'disponible' : 'no-disponible'}`}
+                                        disabled={!horario.disponible}
+                                    >
+                                        {horario.hora_inicio} - {horario.hora_fin}
+                                    </button>
+                                ))
+                            ) : (
+                                <p>No hay horarios para esta fecha</p>
                             )}
                         </div>
                     )}

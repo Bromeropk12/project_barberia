@@ -74,6 +74,7 @@
     margin-top: 20px;
 }
 
+/* Estilos base para horarios */
 .horario-slot {
     background: rgba(31, 41, 55, 0.6);
     border: 2px solid rgba(30, 58, 95, 0.3);
@@ -86,16 +87,32 @@
     text-align: center;
 }
 
-.horario-slot:hover {
-    background: rgba(30, 58, 95, 0.4);
-    border-color: var(--primary-blue);
+/* Horarios DISPONIBLES - Verde */
+.horario-slot.disponible {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: rgba(34, 197, 94, 0.5);
+}
+
+.horario-slot.disponible:hover {
+    background: rgba(34, 197, 94, 0.3);
+    border-color: rgba(34, 197, 94, 0.8);
     transform: scale(1.05);
 }
 
-.horario-slot.selected {
-    background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-light));
-    border-color: var(--primary-blue-light);
-    box-shadow: 0 4px 12px rgba(30, 58, 95, 0.5);
+/* Horarios NO DISPONIBLES - Rojo */
+.horario-slot.no-disponible {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.horario-slot.no-disponible:hover {
+    transform: none;
+}
+
+.horario-slot:disabled {
+    cursor: not-allowed;
 }
 
 .fecha-input {

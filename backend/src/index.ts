@@ -458,22 +458,74 @@ app.put('/api/barberos/:id', authenticateToken, async (req: Request, res: Respon
 
 // ===== ENDPOINTS DE HORARIOS =====
 
-// GET - Obtener horarios disponibles de un barbero en una fecha
+// GET - Obtener horarios de un barbero en una fecha (con disponibilidad en tiempo real)
 app.get('/api/horarios/:barberoId/:fecha', async (req: Request, res: Response) => {
   try {
     const { barberoId, fecha } = req.params;
 
-    const result = await pool.query(
-      'SELECT * FROM horarios WHERE barbero_id = $1 AND fecha = $2 AND disponible = true ORDER BY hora_inicio',
+    // Obtener TODOS los horarios del barbero para esa fecha  
+    const horariosResult = await pool.query(
+      'SELECT * FROM horarios WHERE barbero_id = $1 AND fecha = $2 ORDER BY hora_inicio',
       [barberoId, fecha]
     );
 
-    res.json(result.rows);
+    // Obtener todas las reservas activas del barbero para esa fecha
+    const reservasResult = await pool.query(`
+      SELECT fecha_hora, duracion_min
+      FROM reservas r
+      JOIN servicios s ON r.servicio_id = s.id
+      WHERE r.barbero_id = $1 
+        AND DATE(r.fecha_hora AT TIME ZONE 'America/Bogota')::text = $2
+        AND r.estado IN ('pendiente', 'confirmada')
+    `, [barberoId, fecha]);
+
+    const ahora = new Date();
+
+    // Marcar disponibilidad para cada horario
+    const horariosConDisponibilidad = horariosResult.rows.map(horario => {
+      const fechaHoraSlot = new Date(`${fecha}T${horario.hora_inicio}`);
+
+      // 1. Verificar si ya pasó la hora
+      const yaPaso = fechaHoraSlot <= ahora;
+
+      // 2. Verificar si hay una reserva activa en este slot
+      const tieneReserva = reservasResult.rows.some(reserva => {
+        const fechaHoraReserva = new Date(reserva.fecha_hora);
+        const duracionMinutos = reserva.duracion_min || 30;
+        const numSlots = Math.ceil(duracionMinutos / 30);
+
+        // Verificar si este slot está dentro del rango de la reserva
+        for (let i = 0; i < numSlots; i++) {
+          const slotReserva = new Date(fechaHoraReserva);
+          slotReserva.setMinutes(slotReserva.getMinutes() + i * 30);
+
+          const horaSlotReserva = slotReserva.toTimeString().substring(0, 5);
+          const horaSlotActual = horario.hora_inicio.substring(0, 5);
+
+          if (horaSlotReserva === horaSlotActual) {
+            return true;
+          }
+        }
+        return false;
+      });
+
+      // El horario está disponible solo si NO ha pasado Y NO tiene reserva Y está marcado como disponible en BD
+      const disponible = !yaPaso && !tieneReserva && horario.disponible;
+
+      return {
+        ...horario,
+        disponible
+      };
+    });
+
+    res.json(horariosConDisponibilidad);
   } catch (error) {
     console.error('Error al obtener horarios:', error);
     res.status(500).json({ error: 'Error al obtener horarios' });
   }
 });
+
+
 
 // POST - Generar horarios para un barbero (super_admin o barbero)
 app.post('/api/horarios/generar', authenticateToken, async (req: Request, res: Response) => {
