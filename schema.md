@@ -1,5 +1,6 @@
--- Esquema de Base de Datos Completo - PostgreSQL para Brookings Barber
+# Esquema de Base de Datos Completo - PostgreSQL
 
+```sql
 -- Crear base de datos (si no existe)
 -- CREATE DATABASE barberia;
 
@@ -87,29 +88,27 @@ CREATE TABLE IF NOT EXISTS notificaciones (
 );
 
 -- Índices para optimización
-CREATE INDEX IF NOT EXISTS idx_usuarios_stack_auth_id ON usuarios(stack_auth_id);
-CREATE INDEX IF NOT EXISTS idx_usuarios_rol ON usuarios(rol);
-CREATE INDEX IF NOT EXISTS idx_barberos_usuario_id ON barberos(usuario_id);
-CREATE INDEX IF NOT EXISTS idx_horarios_barbero_fecha ON horarios(barbero_id, fecha);
-CREATE INDEX IF NOT EXISTS idx_reservas_usuario ON reservas(usuario_id);
-CREATE INDEX IF NOT EXISTS idx_reservas_barbero_fecha ON reservas(barbero_id, fecha_hora);
-CREATE INDEX IF NOT EXISTS idx_notificaciones_usuario ON notificaciones(usuario_id, leida);
+CREATE INDEX idx_usuarios_stack_auth_id ON usuarios(stack_auth_id);
+CREATE INDEX idx_usuarios_rol ON usuarios(rol);
+CREATE INDEX idx_barberos_usuario_id ON barberos(usuario_id);
+CREATE INDEX idx_horarios_barbero_fecha ON horarios(barbero_id, fecha);
+CREATE INDEX idx_reservas_usuario ON reservas(usuario_id);
+CREATE INDEX idx_reservas_barbero_fecha ON reservas(barbero_id, fecha_hora);
+CREATE INDEX idx_notificaciones_usuario ON notificaciones(usuario_id, leida);
 
 -- Datos iniciales
 
 -- Usuario Super Admin (crear manualmente o vía Stack Auth)
 -- NOTA: El stack_auth_id debe obtenerse de Stack Auth después del registro
 INSERT INTO usuarios (stack_auth_id, email, nombre, apellido, telefono, rol) VALUES
-('super_admin_stack_id', 'admin@barberia.com', 'Super', 'Admin', '3000000000', 'super_admin')
-ON CONFLICT (stack_auth_id) DO NOTHING;
+('super_admin_stack_id', 'admin@barberia.com', 'Super', 'Admin', '3000000000', 'super_admin');
 
 -- Servicios básicos
 INSERT INTO servicios (nombre, descripcion, precio, duracion_min) VALUES
 ('Corte de Cabello', 'Corte moderno con tijeras y máquina', 25000.00, 30),
 ('Afeitado Clásico', 'Afeitado tradicional con navaja', 15000.00, 20),
 ('Corte + Barba', 'Corte de cabello y arreglo de barba', 35000.00, 45),
-('Solo Barba', 'Recorte y arreglo de barba', 18000.00, 15)
-ON CONFLICT DO NOTHING;
+('Solo Barba', 'Recorte y arreglo de barba', 18000.00, 15);
 
 -- Función para generar slots de horario (opcional, para inicializar)
 -- Esta función puede ejecutarse para poblar horarios automáticamente

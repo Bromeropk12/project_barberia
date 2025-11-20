@@ -3,392 +3,597 @@ import axios from 'axios';
 import './App.css';
 
 // URL base de la API
-const API_URL = 'http://localhost:3000/api/usuarios';
+const API_BASE_URL = 'http://localhost:3000/api';
 
-// Interfaz TypeScript para Usuario
-interface Usuario {
+// Interfaces TypeScript
+interface User {
+  id: number;
+  stack_auth_id: string;
+  email: string;
+  nombre: string;
+  apellido: string;
+  telefono?: string;
+  rol: 'cliente' | 'barbero' | 'super_admin';
+}
+
+interface Servicio {
   id: number;
   nombre: string;
-  apellido: string;
-  telefono: string;
-  correo: string;
-  contraseña: string;
-  acepta_terminos: boolean;
-  fecha_registro?: string;
+  descripcion?: string;
+  precio: number;
+  duracion_min: number;
 }
 
-// Interfaz para el formulario
-interface FormData {
+interface Barbero {
+  id: number;
+  usuario_id: number;
+  turno_trabajo?: string;
+  estado: string;
+  experiencia_anios?: number;
   nombre: string;
   apellido: string;
-  telefono: string;
-  correo: string;
-  contraseña: string;
-  acepta_terminos: boolean;
+  email: string;
 }
 
-// Interfaz para login
-interface LoginData {
-  usuario: string;
-  password: string;
+interface Reserva {
+  id: number;
+  fecha_hora: string;
+  estado: string;
+  servicio_nombre: string;
+  precio: number;
+  barbero_nombre: string;
+  barbero_apellido: string;
+  cliente_nombre?: string;
+  cliente_apellido?: string;
 }
+
+interface Horario {
+  id: number;
+  fecha: string;
+  hora_inicio: string;
+  hora_fin: string;
+  disponible: boolean;
+}
+
+// Configurar axios para incluir token JWT
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 function App() {
-  // Estados
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-  const [showLogin, setShowLogin] = useState<boolean>(false);
-  const [loginData, setLoginData] = useState<LoginData>({
-    usuario: '',
-    password: ''
-  });
-  const [loginError, setLoginError] = useState<string>('');
-
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  const [formData, setFormData] = useState<FormData>({
-    nombre: '',
-    apellido: '',
-    telefono: '',
-    correo: '',
-    contraseña: '',
-    acepta_terminos: false
-  });
-  const [mensaje, setMensaje] = useState<string>('');
+  // Estados globales
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentView, setCurrentView] = useState<string>('landing');
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
-  // Cargar usuarios al montar el componente si está logueado
+  // Estados para el flujo de reserva
+  const [servicios, setServicios] = useState<Servicio[]>([]);
+  const [barberos, setBarberos] = useState<Barbero[]>([]);
+  const [horarios, setHorarios] = useState<Horario[]>([]);
+  const [reservas, setReservas] = useState<Reserva[]>([]);
+
+  // Estados para formularios
+  const [selectedServicio, setSelectedServicio] = useState<Servicio | null>(null);
+  const [selectedBarbero, setSelectedBarbero] = useState<Barbero | null>(null);
+  const [selectedHorario, setSelectedHorario] = useState<Horario | null>(null);
+  const [selectedFecha, setSelectedFecha] = useState<string>('');
+
+  // Estados para sub-vistas
+  const [adminSubView, setAdminSubView] = useState<string>('reservas');
+
+  // Estados para login/registro
+  const [loginData, setLoginData] = useState({ email: '', password: '' });
+  const [registerData, setRegisterData] = useState({
+    nombre: '', apellido: '', telefono: '', email: '', password: '', confirmPassword: ''
+  });
+
+  // Verificar autenticación al cargar
   useEffect(() => {
-    if (isLoggedIn) {
-      obtenerUsuarios();
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      loadUserProfile();
     }
-  }, [isLoggedIn]);
+  }, []);
 
-  // Función para obtener todos los usuarios
-  const obtenerUsuarios = async () => {
+  // Cargar datos iniciales
+  useEffect(() => {
+    if (currentUser) {
+      loadInitialData();
+    }
+  }, [currentUser]);
+
+  const loadUserProfile = async () => {
     try {
-      const response = await axios.get<Usuario[]>(API_URL);
-      setUsuarios(response.data);
+      const response = await axios.get(`${API_BASE_URL}/usuarios/perfil`);
+      setCurrentUser(response.data);
     } catch (err) {
-      console.error('Error al obtener usuarios:', err);
-      setError('Error al cargar los usuarios');
+      localStorage.removeItem('auth_token');
+      setCurrentUser(null);
     }
   };
 
-  // Manejar cambios en los inputs del formulario de usuario
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value
-    });
-  };
+  const loadInitialData = async () => {
+    try {
+      const [serviciosRes, barberosRes, reservasRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/servicios`),
+        axios.get(`${API_BASE_URL}/barberos`),
+        currentUser?.rol === 'cliente' ? axios.get(`${API_BASE_URL}/reservas/mis`) :
+        currentUser?.rol === 'barbero' ? axios.get(`${API_BASE_URL}/reservas/barberia`) :
+        axios.get(`${API_BASE_URL}/reservas`)
+      ]);
 
-  // Manejar cambios en los inputs del login
-  const handleLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setLoginData({
-      ...loginData,
-      [name]: value
-    });
-  };
-
-  // Manejar login
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError('');
-
-    if (loginData.usuario === 'elsuperadmin' && loginData.password === 'yoeladmin852') {
-      setIsLoggedIn(true);
-      setShowLogin(false);
-    } else {
-      setLoginError('Credenciales incorrectas');
+      setServicios(serviciosRes.data);
+      setBarberos(barberosRes.data);
+      setReservas(reservasRes.data);
+    } catch (err) {
+      console.error('Error cargando datos iniciales:', err);
     }
   };
 
-  // Manejar envío del formulario de usuario
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Funciones de autenticación (simuladas para Stack Auth)
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMensaje('');
+    setLoading(true);
     setError('');
 
-    // Validaciones básicas
-    if (!formData.nombre || !formData.apellido || !formData.telefono ||
-        !formData.correo || !formData.contraseña) {
-      setError('Todos los campos son obligatorios');
-      return;
-    }
+    try {
+      // Aquí iría la integración real con Stack Auth
+      // Por ahora, simulamos con un token hardcodeado
+      const mockToken = 'mock_jwt_token_for_development';
+      localStorage.setItem('auth_token', mockToken);
 
-    if (!formData.acepta_terminos) {
-      setError('Debe aceptar los términos y condiciones');
+      // Cargar perfil después del login
+      await loadUserProfile();
+      setCurrentView('dashboard');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error en login');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    if (registerData.password !== registerData.confirmPassword) {
+      setError('Las contraseñas no coinciden');
+      setLoading(false);
       return;
     }
 
     try {
-      await axios.post(API_URL, formData);
-      setMensaje('¡Usuario registrado exitosamente!');
+      // Aquí iría el registro con Stack Auth
+      alert('Registro simulado - En producción usarías Stack Auth');
+      // Después del registro, hacer login automático
+      await handleLogin({ preventDefault: () => {} } as any);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error en registro');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // Limpiar formulario
-      setFormData({
-        nombre: '',
-        apellido: '',
-        telefono: '',
-        correo: '',
-        contraseña: '',
-        acepta_terminos: false
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    setCurrentUser(null);
+    setCurrentView('landing');
+    setSelectedServicio(null);
+    setSelectedBarbero(null);
+    setSelectedHorario(null);
+  };
+
+  // Funciones del flujo de reserva
+  const selectServicio = (servicio: Servicio) => {
+    setSelectedServicio(servicio);
+    setCurrentView('barberos');
+  };
+
+  const selectBarbero = (barbero: Barbero) => {
+    setSelectedBarbero(barbero);
+    setCurrentView('horarios');
+  };
+
+  const loadHorarios = async (fecha: string) => {
+    if (!selectedBarbero) return;
+
+    try {
+      const response = await axios.get(`${API_BASE_URL}/horarios/${selectedBarbero.id}/${fecha}`);
+      setHorarios(response.data);
+      setSelectedFecha(fecha);
+    } catch (err) {
+      console.error('Error cargando horarios:', err);
+    }
+  };
+
+  const selectHorario = (horario: Horario) => {
+    setSelectedHorario(horario);
+    setCurrentView('confirmar');
+  };
+
+  const confirmarReserva = async () => {
+    if (!selectedServicio || !selectedBarbero || !selectedHorario) return;
+
+    try {
+      setLoading(true);
+      const fechaHora = `${selectedFecha}T${selectedHorario.hora_inicio}`;
+
+      await axios.post(`${API_BASE_URL}/reservas`, {
+        barbero_id: selectedBarbero.id,
+        servicio_id: selectedServicio.id,
+        fecha_hora: fechaHora
       });
 
-      // Recargar lista de usuarios
-      obtenerUsuarios();
+      alert('Reserva creada exitosamente');
+      setCurrentView('pago');
     } catch (err: any) {
-      console.error('Error al crear usuario:', err);
-      setError(err.response?.data?.error || 'Error al registrar usuario');
+      setError(err.response?.data?.error || 'Error creando reserva');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Eliminar usuario
-  const eliminarUsuario = async (id: number) => {
-    if (!window.confirm('¿Está seguro de eliminar este usuario?')) {
-      return;
+  const procesarPago = async (metodo: 'efectivo' | 'tarjeta') => {
+    try {
+      setLoading(true);
+      // Obtener la última reserva del usuario (simplificado)
+      const reservasRes = await axios.get(`${API_BASE_URL}/reservas/mis`);
+      const ultimaReserva = reservasRes.data[0];
+
+      await axios.post(`${API_BASE_URL}/pagos`, {
+        reserva_id: ultimaReserva.id,
+        metodo
+      });
+
+      alert('Pago procesado exitosamente');
+      setCurrentView('dashboard');
+      loadInitialData(); // Recargar datos
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error procesando pago');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const cancelarReserva = async (reservaId: number) => {
+    if (!confirm('¿Estás seguro de cancelar esta reserva?')) return;
 
     try {
-      await axios.delete(`${API_URL}/${id}`);
-      setMensaje('Usuario eliminado correctamente');
-      obtenerUsuarios();
-    } catch (err) {
-      console.error('Error al eliminar usuario:', err);
-      setError('Error al eliminar usuario');
+      await axios.put(`${API_BASE_URL}/reservas/${reservaId}/cancelar`);
+      alert('Reserva cancelada');
+      loadInitialData();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error cancelando reserva');
     }
   };
 
-  // Logout
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setShowLogin(false);
-    setLoginData({ usuario: '', password: '' });
-    setLoginError('');
-  };
-
-  if (!isLoggedIn) {
+  // Renderizado condicional
+  if (!currentUser) {
+    // Página de landing con login/registro
     return (
       <div className="landing-container">
-        {/* Header con botón de admin */}
         <header className="landing-header">
-          <div className="logo">
-            <h1>UAN Barber</h1>
+          <h1>Brookings Barber</h1>
+          <div>
+            <button onClick={() => setCurrentView('login')}>Iniciar Sesión</button>
+            <button onClick={() => setCurrentView('register')}>Registrarse</button>
           </div>
-          <button className="btn-admin" onClick={() => setShowLogin(true)}>
-            Panel de Administrador
-          </button>
         </header>
 
-        {/* Modal de login */}
-        {showLogin && (
-          <div className="modal-overlay" onClick={() => setShowLogin(false)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <h2>Acceso Administrador</h2>
-              <form onSubmit={handleLogin} className="login-form">
-                <div className="form-group">
-                  <label htmlFor="usuario">Usuario:</label>
-                  <input
-                    type="text"
-                    id="usuario"
-                    name="usuario"
-                    value={loginData.usuario}
-                    onChange={handleLoginChange}
-                    placeholder="Ingrese usuario"
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="password">Contraseña:</label>
-                  <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    value={loginData.password}
-                    onChange={handleLoginChange}
-                    placeholder="Ingrese contraseña"
-                    required
-                  />
-                </div>
-                {loginError && <div className="alert alert-error">{loginError}</div>}
-                <div className="modal-buttons">
-                  <button type="submit" className="btn btn-primary">Ingresar</button>
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowLogin(false)}>Cancelar</button>
-                </div>
-              </form>
-            </div>
+        {currentView === 'login' && (
+          <div className="auth-modal">
+            <h2>Iniciar Sesión</h2>
+            <form onSubmit={handleLogin}>
+              <input
+                type="email"
+                placeholder="Email"
+                value={loginData.email}
+                onChange={(e) => setLoginData({...loginData, email: e.target.value})}
+                required
+              />
+              <input
+                type="password"
+                placeholder="Contraseña"
+                value={loginData.password}
+                onChange={(e) => setLoginData({...loginData, password: e.target.value})}
+                required
+              />
+              {error && <div className="error">{error}</div>}
+              <button type="submit" disabled={loading}>
+                {loading ? 'Cargando...' : 'Ingresar'}
+              </button>
+            </form>
           </div>
         )}
 
-        {/* Hero Section */}
-        <section className="hero">
-          <div className="hero-content">
-            <h2>Estilo y Elegancia en Cada Corte</h2>
-            <p>En UAN Barber, transformamos tu look con cortes modernos y servicios premium. ¡Visítanos y descubre la diferencia!</p>
-            <button className="btn-cta">Agendar Cita</button>
+        {currentView === 'register' && (
+          <div className="auth-modal">
+            <h2>Registrarse</h2>
+            <form onSubmit={handleRegister}>
+              <input
+                type="text"
+                placeholder="Nombre"
+                value={registerData.nombre}
+                onChange={(e) => setRegisterData({...registerData, nombre: e.target.value})}
+                required
+              />
+              <input
+                type="text"
+                placeholder="Apellido"
+                value={registerData.apellido}
+                onChange={(e) => setRegisterData({...registerData, apellido: e.target.value})}
+                required
+              />
+              <input
+                type="tel"
+                placeholder="Teléfono"
+                value={registerData.telefono}
+                onChange={(e) => setRegisterData({...registerData, telefono: e.target.value})}
+              />
+              <input
+                type="email"
+                placeholder="Email"
+                value={registerData.email}
+                onChange={(e) => setRegisterData({...registerData, email: e.target.value})}
+                required
+              />
+              <input
+                type="password"
+                placeholder="Contraseña"
+                value={registerData.password}
+                onChange={(e) => setRegisterData({...registerData, password: e.target.value})}
+                required
+              />
+              <input
+                type="password"
+                placeholder="Confirmar Contraseña"
+                value={registerData.confirmPassword}
+                onChange={(e) => setRegisterData({...registerData, confirmPassword: e.target.value})}
+                required
+              />
+              {error && <div className="error">{error}</div>}
+              <button type="submit" disabled={loading}>
+                {loading ? 'Cargando...' : 'Registrarse'}
+              </button>
+            </form>
           </div>
-          <div className="hero-image">
-            <img src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Barbero trabajando" />
-          </div>
-        </section>
+        )}
 
-        {/* Servicios */}
-        <section className="services">
-          <h2>Nuestros Servicios</h2>
-          <div className="services-grid">
-            <div className="service-card">
-              <img src="https://images.unsplash.com/photo-1621605815971-fbc98d665033?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Corte de cabello" />
-              <h3>Cortes Modernos</h3>
-              <p>Cortes personalizados según tu estilo y personalidad.</p>
-            </div>
-            <div className="service-card">
-              <img src="https://media.istockphoto.com/id/1973194125/es/foto/peluquero-que-da-forma-a-las-cejas-del-cliente-del-hombre-usando-la-maquinilla-de-afeitar-en.jpg?s=612x612&w=0&k=20&c=il7pTFcu-UQektvG-TS-_VlKfniY_m4r9zcmIgjRq-U=" alt="Afeitado" />
-              <h3>Afeitado Clásico</h3>
-              <p>Afeitado tradicional con navaja y productos premium.</p>
-            </div>
-            <div className="service-card">
-              <img src="https://institutonoa.com.ar/wp-content/uploads/2021/10/barberia_.jpg" alt="Barba" />
-              <h3>Cuidado de Barba</h3>
-              <p>Recortes y tratamientos especializados para tu barba.</p>
+        {currentView === 'landing' && (
+          <>
+            <section className="hero">
+              <h2>Estilo y Elegancia en Cada Corte</h2>
+              <p>Reserva tu cita con los mejores barberos</p>
+              <button onClick={() => setCurrentView('servicios')}>Reservar Cita</button>
+            </section>
+
+            <section className="servicios-preview">
+              <h3>Nuestros Servicios</h3>
+              <div className="servicios-grid">
+                {servicios.slice(0, 3).map(servicio => (
+                  <div key={servicio.id} className="servicio-card">
+                    <h4>{servicio.nombre}</h4>
+                    <p>${servicio.precio}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </>
+        )}
+
+        {currentView === 'servicios' && (
+          <div className="servicios-page">
+            <h2>Selecciona un Servicio</h2>
+            <div className="servicios-grid">
+              {servicios.map(servicio => (
+                <div key={servicio.id} className="servicio-card" onClick={() => selectServicio(servicio)}>
+                  <h4>{servicio.nombre}</h4>
+                  <p>{servicio.descripcion}</p>
+                  <p>${servicio.precio} - {servicio.duracion_min} minutos</p>
+                </div>
+              ))}
             </div>
           </div>
-        </section>
-
-        {/* Footer */}
-        <footer className="footer">
-          <p>&copy; 2025 UAN Barber. Todos los derechos reservados.</p>
-        </footer>
+        )}
       </div>
     );
   }
 
-  // Panel de administración (CRUD de usuarios)
+  // Usuario autenticado - Dashboard
   return (
-    <div className="admin-container">
-      <header className="admin-header">
-        <h1>Panel de Administración - UAN Barber</h1>
-        <button className="btn-logout" onClick={handleLogout}>Cerrar Sesión</button>
+    <div className="dashboard">
+      <header className="dashboard-header">
+        <h1>Brookings Barber</h1>
+        <div className="user-info">
+          <span>{currentUser.nombre} {currentUser.apellido}</span>
+          <button onClick={handleLogout}>Cerrar Sesión</button>
+        </div>
       </header>
 
-      <div className="content-wrapper">
-        {/* Formulario de Registro */}
-        <section className="form-section">
-          <h2> Registrar Nuevo Usuario</h2>
+      <nav className="dashboard-nav">
+        <button onClick={() => setCurrentView('dashboard')}>Inicio</button>
+        <button onClick={() => setCurrentView('reservar')}>Nueva Reserva</button>
+        <button onClick={() => setCurrentView('reservas')}>Mis Reservas</button>
+        {currentUser.rol === 'barbero' && <button onClick={() => setCurrentView('barbero')}>Panel Barbero</button>}
+        {currentUser.rol === 'super_admin' && <button onClick={() => setCurrentView('admin')}>Panel Admin</button>}
+      </nav>
 
-          {mensaje && <div className="alert alert-success">{mensaje}</div>}
-          {error && <div className="alert alert-error">{error}</div>}
+      <main className="dashboard-content">
+        {error && <div className="error-banner">{error}</div>}
 
-          <form onSubmit={handleSubmit} className="user-form">
-            <div className="form-group">
-              <label htmlFor="nombre">Nombre:</label>
-              <input
-                type="text"
-                id="nombre"
-                name="nombre"
-                value={formData.nombre}
-                onChange={handleChange}
-                placeholder="Ingrese su nombre"
-              />
+        {currentView === 'dashboard' && (
+          <div className="dashboard-overview">
+            <h2>Bienvenido, {currentUser.nombre}</h2>
+            <div className="stats">
+              <div className="stat-card">
+                <h3>Reservas Activas</h3>
+                <p>{reservas.filter(r => r.estado === 'confirmada').length}</p>
+              </div>
             </div>
+          </div>
+        )}
 
-            <div className="form-group">
-              <label htmlFor="apellido">Apellido:</label>
-              <input
-                type="text"
-                id="apellido"
-                name="apellido"
-                value={formData.apellido}
-                onChange={handleChange}
-                placeholder="Ingrese su apellido"
-              />
-            </div>
+        {currentView === 'reservar' && (
+          <div className="reserva-flow">
+            <h2>Nueva Reserva</h2>
 
-            <div className="form-group">
-              <label htmlFor="telefono">Teléfono:</label>
-              <input
-                type="tel"
-                id="telefono"
-                name="telefono"
-                value={formData.telefono}
-                onChange={handleChange}
-                placeholder="3001234567"
-              />
-            </div>
+            {!selectedServicio && (
+              <div className="step">
+                <h3>1. Selecciona un Servicio</h3>
+                <div className="servicios-grid">
+                  {servicios.map(servicio => (
+                    <div key={servicio.id} className="servicio-card" onClick={() => selectServicio(servicio)}>
+                      <h4>{servicio.nombre}</h4>
+                      <p>{servicio.descripcion}</p>
+                      <p>${servicio.precio} - {servicio.duracion_min}min</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
-            <div className="form-group">
-              <label htmlFor="correo">Correo Electrónico:</label>
-              <input
-                type="email"
-                id="correo"
-                name="correo"
-                value={formData.correo}
-                onChange={handleChange}
-                placeholder="usuario@example.com"
-              />
-            </div>
+            {selectedServicio && !selectedBarbero && (
+              <div className="step">
+                <h3>2. Selecciona un Barbero</h3>
+                <div className="barberos-grid">
+                  {barberos.map(barbero => (
+                    <div key={barbero.id} className="barbero-card" onClick={() => selectBarbero(barbero)}>
+                      <h4>{barbero.nombre} {barbero.apellido}</h4>
+                      <p>Experiencia: {barbero.experiencia_anios} años</p>
+                      <p>Estado: {barbero.estado}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
-            <div className="form-group">
-              <label htmlFor="contraseña">Contraseña:</label>
-              <input
-                type="password"
-                id="contraseña"
-                name="contraseña"
-                value={formData.contraseña}
-                onChange={handleChange}
-                placeholder="Mínimo 6 caracteres"
-              />
-            </div>
-
-            <div className="form-group checkbox-group">
-              <label className="checkbox-label">
+            {selectedBarbero && !selectedHorario && (
+              <div className="step">
+                <h3>3. Selecciona Fecha y Hora</h3>
                 <input
-                  type="checkbox"
-                  name="acepta_terminos"
-                  checked={formData.acepta_terminos}
-                  onChange={handleChange}
+                  type="date"
+                  onChange={(e) => loadHorarios(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
                 />
-                <span>Acepto los términos y condiciones</span>
-              </label>
+                <div className="horarios-grid">
+                  {horarios.filter(h => h.disponible).map(horario => (
+                    <button
+                      key={horario.id}
+                      onClick={() => selectHorario(horario)}
+                      className="horario-slot"
+                    >
+                      {horario.hora_inicio} - {horario.hora_fin}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {selectedHorario && selectedServicio && selectedBarbero && (
+              <div className="step">
+                <h3>4. Confirmar Reserva</h3>
+                <div className="reserva-summary">
+                  <p><strong>Servicio:</strong> {selectedServicio.nombre}</p>
+                  <p><strong>Barbero:</strong> {selectedBarbero.nombre} {selectedBarbero.apellido}</p>
+                  <p><strong>Fecha:</strong> {selectedFecha}</p>
+                  <p><strong>Hora:</strong> {selectedHorario.hora_inicio}</p>
+                  <p><strong>Precio:</strong> ${selectedServicio.precio}</p>
+                </div>
+                <button onClick={confirmarReserva} disabled={loading}>
+                  {loading ? 'Procesando...' : 'Confirmar Reserva'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {currentView === 'pago' && (
+          <div className="pago-section">
+            <h2>Procesar Pago</h2>
+            <div className="pago-options">
+              <button onClick={() => procesarPago('efectivo')} disabled={loading}>
+                Pagar en Efectivo
+              </button>
+              <button onClick={() => procesarPago('tarjeta')} disabled={loading}>
+                Pagar con Tarjeta
+              </button>
             </div>
+          </div>
+        )}
 
-            <button type="submit" className="btn btn-primary">
-              ✅ Registrar Usuario
-            </button>
-          </form>
-        </section>
-
-        {/* Lista de Usuarios */}
-        <section className="users-section">
-          <h2>👥 Usuarios Registrados ({usuarios.length})</h2>
-
-          {usuarios.length === 0 ? (
-            <p className="no-users">No hay usuarios registrados aún</p>
-          ) : (
-            <div className="users-grid">
-              {usuarios.map((usuario) => (
-                <div key={usuario.id} className="user-card">
-                  <div className="user-header">
-                    <h3>{usuario.nombre} {usuario.apellido}</h3>
-                    <span className="user-id">ID: {usuario.id}</span>
-                  </div>
-                  <div className="user-info">
-                    <p><strong> Correo:</strong> {usuario.correo}</p>
-                    <p><strong> Teléfono:</strong> {usuario.telefono}</p>
-                    <p><strong> Términos:</strong> {usuario.acepta_terminos ? 'Aceptados' : 'No aceptados'}</p>
-                  </div>
-                  <button
-                    onClick={() => eliminarUsuario(usuario.id)}
-                    className="btn btn-danger"
-                  >
-                    🗑️ Eliminar
-                  </button>
+        {currentView === 'reservas' && (
+          <div className="reservas-section">
+            <h2>Mis Reservas</h2>
+            <div className="reservas-list">
+              {reservas.map(reserva => (
+                <div key={reserva.id} className="reserva-card">
+                  <h4>{reserva.servicio_nombre}</h4>
+                  <p>Barbero: {reserva.barbero_nombre} {reserva.barbero_apellido}</p>
+                  <p>Fecha: {new Date(reserva.fecha_hora).toLocaleString()}</p>
+                  <p>Estado: {reserva.estado}</p>
+                  {reserva.estado === 'confirmada' && (
+                    <button onClick={() => cancelarReserva(reserva.id)}>Cancelar</button>
+                  )}
                 </div>
               ))}
             </div>
-          )}
-        </section>
-      </div>
+          </div>
+        )}
+
+        {currentView === 'barbero' && currentUser.rol === 'barbero' && (
+          <div className="barbero-panel">
+            <h2>Panel de Barbero</h2>
+            <h3>Mis Reservas</h3>
+            <div className="reservas-list">
+              {reservas.map(reserva => (
+                <div key={reserva.id} className="reserva-card">
+                  <h4>{reserva.servicio_nombre}</h4>
+                  <p>Cliente: {reserva.cliente_nombre} {reserva.cliente_apellido}</p>
+                  <p>Fecha: {new Date(reserva.fecha_hora).toLocaleString()}</p>
+                  <p>Estado: {reserva.estado}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {currentView === 'admin' && currentUser.rol === 'super_admin' && (
+          <div className="admin-panel">
+            <h2>Panel Super Admin</h2>
+            <div className="admin-tabs">
+              <button onClick={() => setAdminSubView('reservas')}>Reservas</button>
+              <button onClick={() => setAdminSubView('barberos')}>Barberos</button>
+              <button onClick={() => setAdminSubView('servicios')}>Servicios</button>
+            </div>
+
+            {adminSubView === 'reservas' && (
+              <div>
+                <h3>Todas las Reservas</h3>
+                <div className="reservas-list">
+                  {reservas.map(reserva => (
+                    <div key={reserva.id} className="reserva-card">
+                      <h4>{reserva.servicio_nombre}</h4>
+                      <p>Cliente: {reserva.cliente_nombre} {reserva.cliente_apellido}</p>
+                      <p>Barbero: {reserva.barbero_nombre} {reserva.barbero_apellido}</p>
+                      <p>Fecha: {new Date(reserva.fecha_hora).toLocaleString()}</p>
+                      <p>Estado: {reserva.estado}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {adminSubView === 'barberos' && <div><h3>Gestión de Barberos</h3><p>Funcionalidad pendiente...</p></div>}
+            {adminSubView === 'servicios' && <div><h3>Gestión de Servicios</h3><p>Funcionalidad pendiente...</p></div>}
+          </div>
+        )}
+      </main>
     </div>
   );
 }
