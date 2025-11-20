@@ -1,6 +1,7 @@
 // components/ReservaFlow.tsx - Reservation flow component
 import { Servicio, Barbero, Horario } from './types';
 import { SkeletonCard } from './Skeleton';
+import './ReservaFlow.css';
 
 interface ReservaFlowProps {
     servicios: Servicio[];

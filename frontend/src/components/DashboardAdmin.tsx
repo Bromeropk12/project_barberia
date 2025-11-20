@@ -1,7 +1,10 @@
-// components/DashboardAdmin.tsx - Admin dashboard component
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Reserva, Barbero, Servicio, AdminSubView } from './types';
 import { SkeletonList, SkeletonStats } from './Skeleton';
+import { CreateBarberModal } from './CreateBarberModal';
+import { CreateServiceModal } from './CreateServiceModal';
+import './DashboardAdmin.css';
 
 interface DashboardAdminProps {
     reservas: Reserva[];
@@ -11,6 +14,9 @@ interface DashboardAdminProps {
     loading: boolean;
     onEliminarBarbero: (id: number) => void;
     onEliminarServicio: (id: number) => void;
+    onCreateBarber: (data: any) => Promise<void>;
+    onCreateService: (data: any) => Promise<void>;
+    onCancelReserva: (id: number) => Promise<void>;
 }
 
 export function DashboardAdmin({
@@ -20,9 +26,38 @@ export function DashboardAdmin({
     estadisticas,
     loading,
     onEliminarBarbero,
-    onEliminarServicio
+    onEliminarServicio,
+    onCreateBarber,
+    onCreateService,
+    onCancelReserva
 }: DashboardAdminProps) {
+    const navigate = useNavigate();
+    const location = useLocation();
     const [activeTab, setActiveTab] = useState<AdminSubView>('estadisticas');
+    const [showCreateBarber, setShowCreateBarber] = useState(false);
+    const [showCreateService, setShowCreateService] = useState(false);
+
+    // Sincronizar tab con la URL
+    useEffect(() => {
+        const path = location.pathname;
+        if (path.includes('/admin/reservas')) {
+            setActiveTab('reservas');
+        } else if (path.includes('/admin/barberos')) {
+            setActiveTab('barberos');
+        } else if (path.includes('/admin/servicios')) {
+            setActiveTab('servicios');
+        } else {
+            setActiveTab('estadisticas');
+            if (path === '/admin' || path === '/admin/') {
+                navigate('/admin/estadisticas', { replace: true });
+            }
+        }
+    }, [location.pathname, navigate]);
+
+    const handleTabChange = (tab: AdminSubView) => {
+        setActiveTab(tab);
+        navigate(`/admin/${tab}`);
+    };
 
     return (
         <div className="admin-panel">
@@ -31,25 +66,25 @@ export function DashboardAdmin({
             <div className="admin-tabs">
                 <button
                     className={activeTab === 'estadisticas' ? 'active' : ''}
-                    onClick={() => setActiveTab('estadisticas')}
+                    onClick={() => handleTabChange('estadisticas')}
                 >
                     Estadísticas
                 </button>
                 <button
                     className={activeTab === 'reservas' ? 'active' : ''}
-                    onClick={() => setActiveTab('reservas')}
+                    onClick={() => handleTabChange('reservas')}
                 >
                     Reservas
                 </button>
                 <button
                     className={activeTab === 'barberos' ? 'active' : ''}
-                    onClick={() => setActiveTab('barberos')}
+                    onClick={() => handleTabChange('barberos')}
                 >
                     Barberos
                 </button>
                 <button
                     className={activeTab === 'servicios' ? 'active' : ''}
-                    onClick={() => setActiveTab('servicios')}
+                    onClick={() => handleTabChange('servicios')}
                 >
                     Servicios
                 </button>
@@ -64,41 +99,41 @@ export function DashboardAdmin({
                         <>
                             <div className="stats-grid">
                                 <div className="stat-card">
-                                    <div className="stat-value">{estadisticas.reservas?.mes || 0}</div>
-                                    <div className="stat-label">Reservas este Mes</div>
+                                    <div className="stat-value">{estadisticas.reservasPorMes?.[0]?.cantidad || estadisticas.totalReservas || 0}</div>
+                                    <div className="stat-label">Reservas Totales</div>
                                 </div>
                                 <div className="stat-card">
                                     <div className="stat-value">
-                                        ${(estadisticas.ingresos?.mes || 0).toLocaleString()}
+                                        ${(estadisticas.ingresosTotales || 0).toLocaleString()}
                                     </div>
-                                    <div className="stat-label">Ingresos del Mes</div>
+                                    <div className="stat-label">Ingresos Totales</div>
                                 </div>
                                 <div className="stat-card">
-                                    <div className="stat-value">{estadisticas.barberosActivos || 0}</div>
+                                    <div className="stat-value">{barberos.length}</div>
                                     <div className="stat-label">Barberos Activos</div>
                                 </div>
                                 <div className="stat-card">
-                                    <div className="stat-value">{estadisticas.serviciosActivos || 0}</div>
-                                    <div className="stat-label">Servicios Disponibles</div>
+                                    <div className="stat-value">{servicios.length}</div>
+                                    <div className="stat-label">Servicios Activos</div>
                                 </div>
                             </div>
 
                             <div className="stats-details">
                                 <div className="top-list">
                                     <h4>Top Barberos</h4>
-                                    {estadisticas.topBarberos?.map((b: any, i: number) => (
+                                    {estadisticas.barberosActivos?.map((b: any, i: number) => (
                                         <div key={i} className="top-item">
                                             <span>{b.nombre} {b.apellido}</span>
-                                            <span>{b.total_reservas} reservas</span>
+                                            <span>{b.reservas} reservas</span>
                                         </div>
                                     ))}
                                 </div>
-                                <div className=" top-list">
+                                <div className="top-list">
                                     <h4>Top Servicios</h4>
-                                    {estadisticas.topServicios?.map((s: any, i: number) => (
+                                    {estadisticas.serviciosPopulares?.map((s: any, i: number) => (
                                         <div key={i} className="top-item">
                                             <span>{s.nombre}</span>
-                                            <span>{s.total_reservas} reservas</span>
+                                            <span>{s.reservas} reservas</span>
                                         </div>
                                     ))}
                                 </div>
@@ -117,11 +152,21 @@ export function DashboardAdmin({
                         <div className="reservas-list">
                             {reservas.map(reserva => (
                                 <div key={reserva.id} className="reserva-card">
-                                    <h4>{reserva.servicio_nombre}</h4>
-                                    <p>Cliente: {reserva.cliente_nombre} {reserva.cliente_apellido}</p>
-                                    <p>Barbero: {reserva.barbero_nombre} {reserva.barbero_apellido}</p>
-                                    <p>Fecha: {new Date(reserva.fecha_hora).toLocaleString()}</p>
-                                    <p className={`estado estado-${reserva.estado}`}>Estado: {reserva.estado}</p>
+                                    <div className="reserva-header">
+                                        <h4>{reserva.servicio_nombre}</h4>
+                                        <span className={`estado estado-${reserva.estado}`}>{reserva.estado}</span>
+                                    </div>
+                                    <p><strong>Cliente:</strong> {reserva.cliente_nombre} {reserva.cliente_apellido}</p>
+                                    <p><strong>Barbero:</strong> {reserva.barbero_nombre} {reserva.barbero_apellido}</p>
+                                    <p><strong>Fecha:</strong> {new Date(reserva.fecha_hora).toLocaleString()}</p>
+                                    {reserva.estado !== 'cancelada' && (
+                                        <button
+                                            className="btn-danger btn-sm"
+                                            onClick={() => onCancelReserva(reserva.id)}
+                                        >
+                                            Cancelar Reserva
+                                        </button>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -131,7 +176,12 @@ export function DashboardAdmin({
 
             {activeTab === 'barberos' && (
                 <div>
-                    <h3>Gestión de Barberos</h3>
+                    <div className="section-header">
+                        <h3>Gestión de Barberos</h3>
+                        <button className="btn-primary" onClick={() => setShowCreateBarber(true)}>
+                            + Registrar Barbero
+                        </button>
+                    </div>
                     {loading ? (
                         <SkeletonList count={4} />
                     ) : (
@@ -141,7 +191,7 @@ export function DashboardAdmin({
                                     <div className="barbero-info">
                                         <h4>{barbero.nombre} {barbero.apellido}</h4>
                                         <p>Email: {barbero.email}</p>
-                                        <p>Estado: {barbero.estado}</p>
+                                        <p>Estado: <span className={`status-${barbero.estado}`}>{barbero.estado}</span></p>
                                         <p>Experiencia: {barbero.experiencia_anios} años</p>
                                         <p>Turno: {barbero.turno_trabajo}</p>
                                     </div>
@@ -163,7 +213,12 @@ export function DashboardAdmin({
 
             {activeTab === 'servicios' && (
                 <div>
-                    <h3>Gestión de Servicios</h3>
+                    <div className="section-header">
+                        <h3>Gestión de Servicios</h3>
+                        <button className="btn-primary" onClick={() => setShowCreateService(true)}>
+                            + Nuevo Servicio
+                        </button>
+                    </div>
                     {loading ? (
                         <SkeletonList count={4} />
                     ) : (
@@ -191,6 +246,28 @@ export function DashboardAdmin({
                         </div>
                     )}
                 </div>
+            )}
+
+            {showCreateBarber && (
+                <CreateBarberModal
+                    onClose={() => setShowCreateBarber(false)}
+                    onSubmit={async (data) => {
+                        await onCreateBarber(data);
+                        setShowCreateBarber(false);
+                    }}
+                    loading={loading}
+                />
+            )}
+
+            {showCreateService && (
+                <CreateServiceModal
+                    onClose={() => setShowCreateService(false)}
+                    onSubmit={async (data) => {
+                        await onCreateService(data);
+                        setShowCreateService(false);
+                    }}
+                    loading={loading}
+                />
             )}
         </div>
     );

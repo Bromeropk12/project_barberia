@@ -1,29 +1,25 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import './App.css';
+import { User, Servicio, Barbero, Horario, Reserva, RegisterData } from './components/types';
+import { API_BASE_URL, admin, servicios as serviciosApi } from './api';
+import api from './api';
 import { useToast, ToastContainer } from './Toast';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { LandingPage } from './components/LandingPage';
-import { LoginModal } from './components/LoginModal';
-import { RegisterModal, RegisterData } from './components/RegisterModal';
 import { DashboardCliente } from './components/DashboardCliente';
-import { DashboardAdmin } from './components/DashboardAdmin';
 import { ReservaFlow } from './components/ReservaFlow';
-import { User, Servicio, Barbero, Reserva, Horario } from './components/types';
+import { DashboardAdmin } from './components/DashboardAdmin';
+import DashboardBarbero from './components/DashboardBarbero';
+import { NotFound } from './components/NotFound';
+import { LoginModal } from './components/LoginModal';
+import { RegisterModal } from './components/RegisterModal';
 
-const API_BASE_URL = 'http://localhost:3000/api';
-
-axios.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-function App() {
+function AppContent() {
   const toast = useToast();
+  const navigate = useNavigate();
+
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [currentView, setCurrentView] = useState<string>('landing');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [servicios, setServicios] = useState<Servicio[]>([]);
@@ -54,9 +50,8 @@ function App() {
 
   const loadUserProfile = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/usuarios/perfil`);
+      const response = await api.get('/usuarios/perfil');
       setCurrentUser(response.data);
-      setCurrentView('dashboard');
     } catch (err) {
       localStorage.removeItem('auth_token');
       setCurrentUser(null);
@@ -67,8 +62,8 @@ function App() {
     try {
       setLoading(true);
       const [serviciosRes, barberosRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/servicios`),
-        axios.get(`${API_BASE_URL}/barberos`)
+        api.get('/servicios'),
+        api.get('/barberos')
       ]);
       setServicios(serviciosRes.data);
       setBarberos(barberosRes.data);
@@ -83,19 +78,19 @@ function App() {
     try {
       setLoading(true);
       const [serviciosRes, barberosRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/servicios`),
-        axios.get(`${API_BASE_URL}/barberos`)
+        api.get('/servicios'),
+        api.get('/barberos')
       ]);
       setServicios(serviciosRes.data);
       setBarberos(barberosRes.data);
 
       if (currentUser?.rol === 'cliente') {
-        const reservasRes = await axios.get(`${API_BASE_URL}/reservas/mis`);
+        const reservasRes = await api.get('/reservas/mis');
         setReservas(reservasRes.data);
       } else if (currentUser?.rol === 'super_admin') {
         const [reservasRes, statsRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/reservas`),
-          axios.get(`${API_BASE_URL}/estadisticas`)
+          api.get('/reservas'),
+          api.get('/estadisticas')
         ]);
         setReservas(reservasRes.data);
         setEstadisticas(statsRes.data);
@@ -126,7 +121,7 @@ function App() {
     }
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
+      const response = await api.post('/auth/login', {
         email,
         password
       });
@@ -134,7 +129,7 @@ function App() {
       localStorage.setItem('auth_token', response.data.access_token);
       setCurrentUser(response.data.user);
       setShowLogin(false);
-      setCurrentView('dashboard');
+      navigate('/dashboard');
       toast.success('¡Bienvenido!', `Hola ${response.data.user.nombre}`);
     } catch (err: any) {
       const errorMsg = err.response?.data?.error || 'Error al iniciar sesión';
@@ -175,7 +170,7 @@ function App() {
     }
 
     try {
-      await axios.post(`${API_BASE_URL}/auth/register`, {
+      await api.post('/auth/register', {
         name: `${data.nombre} ${data.apellido}`,
         email: data.email,
         password: data.password,
@@ -197,7 +192,7 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem('auth_token');
     setCurrentUser(null);
-    setCurrentView('landing');
+    navigate('/inicio');
     toast.info('Sesión cerrada', 'Hasta pronto');
   };
 
@@ -239,7 +234,7 @@ function App() {
     setLoading(true);
     try {
       const fechaHora = `${selectedFecha}T${selectedHorario.hora_inicio}`;
-      await axios.post(`${API_BASE_URL}/reservas`, {
+      await api.post('/reservas', {
         servicio_id: selectedServicio.id,
         barbero_id: selectedBarbero.id,
         fecha_hora: fechaHora
@@ -251,7 +246,7 @@ function App() {
       setSelectedBarbero(null);
       setSelectedHorario(null);
       setSelectedFecha('');
-      setCurrentView('dashboard');
+      navigate('/dashboard');
 
       loadUserData();
     } catch (err: any) {
@@ -267,7 +262,7 @@ function App() {
 
     setLoading(true);
     try {
-      await axios.put(`${API_BASE_URL}/reservas/${id}/cancelar`);
+      await api.put(`/reservas/${id}/cancelar`);
       toast.success('Reserva cancelada', 'La reserva ha sido cancelada');
       loadUserData();
     } catch (err: any) {
@@ -286,7 +281,7 @@ function App() {
     if (!window.confirm('¿Desactivar este barbero?')) return;
 
     try {
-      await axios.delete(`${API_BASE_URL}/barberos/${id}`);
+      await api.delete(`/barberos/${id}`);
       toast.success('Barbero desactivado', 'El barbero ha sido desactivado');
       loadUserData();
     } catch (err: any) {
@@ -298,7 +293,7 @@ function App() {
     if (!window.confirm('¿Desactivar este servicio?')) return;
 
     try {
-      await axios.delete(`${API_BASE_URL}/servicios/${id}`);
+      await api.delete(`/servicios/${id}`);
       toast.success('Servicio desactivado', 'El servicio ha sido desactivado');
       loadUserData();
     } catch (err: any) {
@@ -306,17 +301,65 @@ function App() {
     }
   };
 
+  // --- Admin Handlers ---
+
+  const handleCreateBarber = async (data: any) => {
+    setLoading(true);
+    try {
+      const res = await admin.registerBarber(data);
+      toast.success('Barbero Registrado', `Credenciales enviadas. Email: ${res.data.credentials.email}`);
+      // En un caso real, mostraríamos las credenciales en un modal o alerta mejor
+      alert(`IMPORTANTE: Guarda estas credenciales.\nEmail: ${res.data.credentials.email}\nPassword: ${res.data.credentials.password}`);
+      loadUserData();
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Error al registrar barbero';
+      toast.error('Error', errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateService = async (data: any) => {
+    setLoading(true);
+    try {
+      await serviciosApi.create(data);
+      toast.success('Servicio Creado', 'El servicio ha sido añadido exitosamente');
+      loadUserData();
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Error al crear servicio';
+      toast.error('Error', errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdminCancelReserva = async (id: number) => {
+    if (!window.confirm('¿Cancelar esta reserva como administrador? (Sin restricciones)')) return;
+
+    setLoading(true);
+    try {
+      await admin.cancelReservation(id);
+      toast.success('Reserva Cancelada', 'La reserva ha sido cancelada por administración');
+      loadUserData();
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Error al cancelar reserva';
+      toast.error('Error', errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="App">
+    <>
       <ToastContainer toasts={toast.toasts} removeToast={toast.removeToast} />
 
       {currentUser && (
         <header className="app-header">
           <h1>Barbería UAN</h1>
           <nav>
-            <button onClick={() => setCurrentView('dashboard')}>Dashboard</button>
+            <button onClick={() => navigate('/dashboard')}>Dashboard</button>
             {currentUser.rol === 'cliente' && (
-              <button onClick={() => setCurrentView('reservar')}>Nueva Reserva</button>
+              <button onClick={() => navigate('/reserva')}>Nueva Reserva</button>
             )}
             <span>Hola, {currentUser.nombre}</span>
             <button onClick={handleLogout}>Cerrar Sesión</button>
@@ -324,62 +367,103 @@ function App() {
         </header>
       )}
 
-      {currentView === 'landing' && (
-        <LandingPage
-          servicios={servicios}
-          barberos={barberos}
-          loading={loading}
-          onLoginClick={() => setShowLogin(true)}
-          onRegisterClick={() => setShowRegister(true)}
-          onReservarClick={() => {
-            if (currentUser) {
-              setCurrentView('reservar');
-            } else {
-              setShowLogin(true);
-            }
-          }}
-        />
-      )}
+      <Routes>
+        {/* Ruta raíz redirige a inicio */}
+        <Route path="/" element={<Navigate to="/inicio" replace />} />
 
-      {currentView === 'dashboard' && currentUser?.rol === 'cliente' && (
-        <DashboardCliente
-          reservas={reservas}
-          loading={loading}
-          onCancelar={handleCancelarReserva}
-          onReprogramar={handleReprogramarReserva}
+        {/* Rutas públicas */}
+        <Route
+          path="/inicio"
+          element={
+            currentUser ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <LandingPage
+                servicios={servicios}
+                barberos={barberos}
+                loading={loading}
+                onLoginClick={() => setShowLogin(true)}
+                onRegisterClick={() => setShowRegister(true)}
+                onReservarClick={() => setShowLogin(true)}
+              />
+            )
+          }
         />
-      )}
 
-      {currentView === 'dashboard' && currentUser?.rol === 'super_admin' && (
-        <DashboardAdmin
-          reservas={reservas}
-          barberos={barberos}
-          servicios={servicios}
-          estadisticas={estadisticas}
-          loading={loading}
-          onEliminarBarbero={handleEliminarBarbero}
-          onEliminarServicio={handleEliminarServicio}
+        {/* Rutas protegidas - Cliente */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute currentUser={currentUser}>
+              {currentUser?.rol === 'cliente' ? (
+                <DashboardCliente
+                  user={currentUser}
+                  reservas={reservas}
+                  loading={loading}
+                  onCancelar={handleCancelarReserva}
+                  onReprogramar={handleReprogramarReserva}
+                  onLogout={handleLogout}
+                />
+              ) : currentUser?.rol === 'barbero' ? (
+                <DashboardBarbero user={currentUser} onLogout={handleLogout} />
+              ) : currentUser?.rol === 'super_admin' ? (
+                <Navigate to="/admin/estadisticas" replace />
+              ) : (
+                <div>Dashboard para {currentUser?.rol}</div>
+              )}
+            </ProtectedRoute>
+          }
         />
-      )}
 
-      {currentView === 'reservar' && currentUser && (
-        <ReservaFlow
-          servicios={servicios}
-          barberos={barberos}
-          horarios={horarios}
-          loading={loading}
-          onSelectServicio={handleSelectServicio}
-          onSelectBarbero={handleSelectBarbero}
-          onLoadHorarios={handleLoadHorarios}
-          onSelectHorario={handleSelectHorario}
-          onConfirmar={handleConfirmarReserva}
-          selectedServicio={selectedServicio}
-          selectedBarbero={selectedBarbero}
-          selectedHorario={selectedHorario}
-          selectedFecha={selectedFecha}
+        <Route
+          path="/reserva"
+          element={
+            <ProtectedRoute currentUser={currentUser} requiredRole="cliente">
+              <ReservaFlow
+                servicios={servicios}
+                barberos={barberos}
+                horarios={horarios}
+                loading={loading}
+                onSelectServicio={handleSelectServicio}
+                onSelectBarbero={handleSelectBarbero}
+                onLoadHorarios={handleLoadHorarios}
+                onSelectHorario={handleSelectHorario}
+                onConfirmar={handleConfirmarReserva}
+                selectedServicio={selectedServicio}
+                selectedBarbero={selectedBarbero}
+                selectedHorario={selectedHorario}
+                selectedFecha={selectedFecha}
+              />
+            </ProtectedRoute>
+          }
         />
-      )}
 
+        {/* Rutas admin - todas redirigen al mismo componente pero con diferentes tabs */}
+        <Route
+          path="/admin/*"
+          element={
+            <ProtectedRoute currentUser={currentUser} requiredRole="super_admin">
+              <DashboardAdmin
+                reservas={reservas}
+                barberos={barberos}
+                servicios={servicios}
+                estadisticas={estadisticas}
+                loading={loading}
+                onEliminarBarbero={handleEliminarBarbero}
+                onEliminarServicio={handleEliminarServicio}
+                onCreateBarber={handleCreateBarber}
+                onCreateService={handleCreateService}
+                onCancelReserva={handleAdminCancelReserva}
+              />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Página 404 */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+
+      {/* Modales globales */}
       {showLogin && (
         <LoginModal
           onSubmit={handleLogin}
@@ -403,7 +487,15 @@ function App() {
           error={error}
         />
       )}
-    </div>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
   );
 }
 

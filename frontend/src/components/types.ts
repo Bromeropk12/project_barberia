@@ -24,6 +24,7 @@ export interface Barbero {
     turno_trabajo?: string;
     estado: string;
     experiencia_anios?: number;
+    especialidades?: string;
     nombre: string;
     apellido: string;
     email: string;
@@ -35,10 +36,12 @@ export interface Reserva {
     estado: string;
     servicio_nombre: string;
     precio: number;
+    duracion_min?: number;
     barbero_nombre: string;
     barbero_apellido: string;
     cliente_nombre?: string;
     cliente_apellido?: string;
+    telefono?: string;
 }
 
 export interface Horario {
@@ -47,6 +50,15 @@ export interface Horario {
     hora_inicio: string;
     hora_fin: string;
     disponible: boolean;
+}
+
+export interface RegisterData {
+    nombre: string;
+    apellido: string;
+    email: string;
+    password: string;
+    confirmPassword: string;
+    telefono?: string;
 }
 
 export type AdminSubView = 'reservas' | 'barberos' | 'servicios' | 'estadisticas';

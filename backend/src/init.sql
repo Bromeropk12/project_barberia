@@ -1,11 +1,4 @@
 -- Esquema de Base de Datos Completo - PostgreSQL para Brookings Barber
-
--- Crear base de datos (si no existe)
--- CREATE DATABASE barberia;
-
--- Usar la base de datos
--- \c barberia;
-
 -- Tabla de usuarios (perfiles adicionales, Stack Auth maneja auth)
 CREATE TABLE IF NOT EXISTS usuarios (
     id SERIAL PRIMARY KEY,
@@ -122,12 +115,16 @@ CREATE OR REPLACE FUNCTION generar_horarios_barbero(
 DECLARE
     fecha_actual DATE := p_fecha_inicio;
     hora_actual TIME := '09:00';
+    disponible BOOLEAN := true;
 BEGIN
     WHILE fecha_actual <= p_fecha_fin LOOP
         hora_actual := '09:00';
         WHILE hora_actual < '18:00' LOOP
-            INSERT INTO horarios (barbero_id, fecha, hora_inicio, hora_fin)
-            VALUES (p_barbero_id, fecha_actual, hora_actual, hora_actual + INTERVAL '30 minutes')
+            -- Marcar almuerzo (12:00 - 13:00) como no disponible
+            disponible := NOT (hora_actual >= '12:00' AND hora_actual < '13:00');
+
+            INSERT INTO horarios (barbero_id, fecha, hora_inicio, hora_fin, disponible)
+            VALUES (p_barbero_id, fecha_actual, hora_actual, hora_actual + INTERVAL '30 minutes', disponible)
             ON CONFLICT (barbero_id, fecha, hora_inicio) DO NOTHING;
 
             hora_actual := hora_actual + INTERVAL '30 minutes';

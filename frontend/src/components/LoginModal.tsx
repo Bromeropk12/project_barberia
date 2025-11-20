@@ -1,5 +1,6 @@
 // components/LoginModal.tsx - Login modal component
 import { useState } from 'react';
+import './AuthModals.css';
 
 interface LoginModalProps {
     onSubmit: (email: string, password: string) => Promise<void>;

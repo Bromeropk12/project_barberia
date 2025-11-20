@@ -1,0 +1,132 @@
+/* ReservaFlow.css */
+
+.reserva-flow {
+    padding: 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.reserva-flow h2 {
+    font-size: 3rem;
+    background: linear-gradient(135deg, var(--accent-white) 0%, var(--primary-blue-light) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 40px;
+    font-weight: 800;
+    text-align: center;
+}
+
+.step {
+    background: rgba(31, 41, 55, 0.4);
+    border: 2px solid rgba(30, 58, 95, 0.3);
+    border-radius: 20px;
+    padding: 36px;
+    margin-bottom: 32px;
+    position: relative;
+}
+
+.step h3 {
+    color: var(--accent-white);
+    font-size: 1.6rem;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 700;
+}
+
+.step h3::before {
+    content: '';
+    width: 40px;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-blue), var(--primary-blue-light));
+    border-radius: 2px;
+}
+
+.servicios-grid,
+.barberos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+}
+
+.servicio-card.clickable,
+.barbero-card.clickable {
+    cursor: pointer;
+}
+
+.horarios-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.horario-slot {
+    background: rgba(31, 41, 55, 0.6);
+    border: 2px solid rgba(30, 58, 95, 0.3);
+    border-radius: 12px;
+    padding: 16px 20px;
+    color: var(--accent-white);
+    font-weight: 600;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-align: center;
+}
+
+.horario-slot:hover {
+    background: rgba(30, 58, 95, 0.4);
+    border-color: var(--primary-blue);
+    transform: scale(1.05);
+}
+
+.horario-slot.selected {
+    background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-light));
+    border-color: var(--primary-blue-light);
+    box-shadow: 0 4px 12px rgba(30, 58, 95, 0.5);
+}
+
+.fecha-input {
+    background: rgba(31, 41, 55, 0.6);
+    border: 2px solid rgba(30, 58, 95, 0.3);
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: var(--accent-white);
+    font-size: 1rem;
+    margin-bottom: 24px;
+}
+
+.reserva-summary {
+    background: rgba(30, 58, 95, 0.2);
+    border: 2px solid rgba(30, 58, 95, 0.3);
+    border-radius: 16px;
+    padding: 24px;
+    margin: 24px 0;
+}
+
+.reserva-summary p {
+    margin: 12px 0;
+    font-size: 1.1rem;
+    color: var(--accent-white);
+}
+
+.reserva-summary strong {
+    color: var(--primary-blue-light);
+}
+
+.btn-large {
+    padding: 16px 40px;
+    font-size: 1.2rem;
+    margin-top: 24px;
+}
+
+@media (max-width: 768px) {
+    .reserva-flow {
+        padding: 24px;
+    }
+
+    .step {
+        padding: 24px;
+    }
+}

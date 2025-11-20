@@ -254,28 +254,6 @@ app.put('/api/servicios/:id', authenticateToken, requireRole(['super_admin']), a
   }
 });
 
-// PUT - Actualizar servicio (solo super_admin)
-app.put('/api/servicios/:id', authenticateToken, requireRole(['super_admin']), async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { nombre, descripcion, precio, duracion_min, activo } = req.body;
-
-    const result = await pool.query(
-      'UPDATE servicios SET nombre = $1, descripcion = $2, precio = $3, duracion_min = $4, activo = $5 WHERE id = $6 RETURNING *',
-      [nombre, descripcion, precio, duracion_min, activo, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Servicio no encontrado' });
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Error al actualizar servicio:', error);
-    res.status(500).json({ error: 'Error al actualizar servicio' });
-  }
-});
-
 // DELETE - Desactivar servicio (solo super_admin)
 app.delete('/api/servicios/:id', authenticateToken, requireRole(['super_admin']), async (req: Request, res: Response) => {
   try {
@@ -303,7 +281,7 @@ app.delete('/api/servicios/:id', authenticateToken, requireRole(['super_admin'])
 app.get('/api/barberos', async (req: Request, res: Response) => {
   try {
     const result = await pool.query(`
-      SELECT b.*, u.nombre, u.apellido, u.email
+      SELECT b.*, u.nombre, u.apellido, u.email, u.telefono
       FROM barberos b
       JOIN usuarios u ON b.usuario_id = u.id
       WHERE b.estado != 'inactivo'
@@ -316,7 +294,60 @@ app.get('/api/barberos', async (req: Request, res: Response) => {
   }
 });
 
-// POST - Crear barbero (solo super_admin)
+// POST - Registrar nuevo barbero completo (Admin)
+app.post('/api/admin/barberos/register', authenticateToken, requireRole(['super_admin']), async (req: Request, res: Response) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { name, email, password, phone, turno_trabajo, experiencia_anios, especialidades } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Nombre, email y contraseña son obligatorios' });
+    }
+
+    // 1. Verificar usuario existente
+    const existingUser = await client.query('SELECT id FROM usuarios WHERE email = $1', [email]);
+    if (existingUser.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'El email ya está registrado' });
+    }
+
+    // 2. Crear Usuario
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+    const nameParts = name.split(' ');
+    const nombre = nameParts[0] || '';
+    const apellido = nameParts.slice(1).join(' ') || '';
+
+    const userResult = await client.query(
+      'INSERT INTO usuarios (email, password_hash, nombre, apellido, telefono, rol) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+      [email, passwordHash, nombre, apellido, phone || null, 'barbero']
+    );
+    const userId = userResult.rows[0].id;
+
+    // 3. Crear Perfil Barbero
+    await client.query(
+      'INSERT INTO barberos (usuario_id, turno_trabajo, experiencia_anios, especialidades) VALUES ($1, $2, $3, $4)',
+      [userId, turno_trabajo || 'manana', experiencia_anios || 0, especialidades || 'General']
+    );
+
+    await client.query('COMMIT');
+
+    res.status(201).json({
+      message: 'Barbero registrado exitosamente',
+      credentials: { email, password }
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error al registrar barbero:', error);
+    res.status(500).json({ error: 'Error al registrar barbero' });
+  } finally {
+    client.release();
+  }
+});
+
+// POST - Crear barbero (solo super_admin) - Legacy (usa usuario existente)
 app.post('/api/barberos', authenticateToken, requireRole(['super_admin']), async (req: Request, res: Response) => {
   try {
     const { usuario_id, turno_trabajo, experiencia_anios, especialidades } = req.body;
@@ -351,27 +382,6 @@ app.post('/api/barberos', authenticateToken, requireRole(['super_admin']), async
   }
 });
 
-// PUT - Actualizar barbero (solo super_admin)
-app.put('/api/barberos/:id', authenticateToken, requireRole(['super_admin']), async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { turno_trabajo, estado, experiencia_anios, especialidades } = req.body;
-
-    const result = await pool.query(
-      'UPDATE barberos SET turno_trabajo = $1, estado = $2, experiencia_anios = $3, especialidades = $4 WHERE id = $5 RETURNING *',
-      [turno_trabajo, estado, experiencia_anios, especialidades, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Barbero no encontrado' });
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Error al actualizar barbero:', error);
-    res.status(500).json({ error: 'Error al actualizar barbero' });
-  }
-});
 
 // DELETE - Desactivar barbero (solo super_admin)
 app.delete('/api/barberos/:id', authenticateToken, requireRole(['super_admin']), async (req: Request, res: Response) => {
@@ -584,9 +594,9 @@ app.post('/api/reservas', authenticateToken, async (req: Request, res: Response)
     const horarioCheck = await pool.query(`
       SELECT h.* FROM horarios h
       WHERE h.barbero_id = $1 AND h.fecha = $2::date
-      AND h.hora_inicio <= $2::time AND h.hora_fin > $2::time
+      AND h.hora_inicio <= $3::time AND h.hora_fin > $3::time
       AND h.disponible = true
-    `, [barbero_id, fecha_hora]);
+    `, [barbero_id, fecha_hora.split('T')[0], fecha_hora.split('T')[1]]);
 
     if (horarioCheck.rows.length === 0) {
       return res.status(409).json({ error: 'Horario no disponible' });
@@ -685,8 +695,8 @@ app.put('/api/reservas/:id/cancelar', authenticateToken, async (req: Request, re
     await pool.query(`
       UPDATE horarios SET disponible = true
       WHERE barbero_id = $1 AND fecha = $2::date
-      AND hora_inicio <= $2::time AND hora_fin > $2::time
-    `, [reserva.barbero_id, reserva.fecha_hora]);
+      AND hora_inicio <= $3::time AND hora_fin > $3::time
+    `, [reserva.barbero_id, reserva.fecha_hora.split('T')[0], reserva.fecha_hora.split('T')[1]]);
 
     // Obtener datos para el email
     const userData = await pool.query('SELECT email, nombre FROM usuarios WHERE id = $1', [userId]);
@@ -716,6 +726,129 @@ app.put('/api/reservas/:id/cancelar', authenticateToken, async (req: Request, re
     res.json({ mensaje: 'Reserva cancelada correctamente' });
   } catch (error) {
     console.error('Error al cancelar reserva:', error);
+    res.status(500).json({ error: 'Error al cancelar reserva' });
+  }
+});
+
+// PUT - Completar reserva (solo barbero)
+app.put('/api/reservas/:id/completar', authenticateToken, requireRole(['barbero']), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+
+    // Verificar que la reserva pertenece al barbero
+    const reservaCheck = await pool.query(`
+      SELECT r.* FROM reservas r
+      JOIN barberos b ON r.barbero_id = b.id
+      WHERE r.id = $1 AND b.usuario_id = $2
+    `, [id, userId]);
+
+    if (reservaCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'No tienes permisos para completar esta reserva' });
+    }
+
+    // Actualizar estado
+    const result = await pool.query(
+      'UPDATE reservas SET estado = $1, fecha_modificacion = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
+      ['completada', id]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error al completar reserva:', error);
+    res.status(500).json({ error: 'Error al completar reserva' });
+  }
+});
+
+// PUT - Cancelar reserva por barbero (motivos de fuerza mayor)
+app.put('/api/reservas/:id/cancelar_barbero', authenticateToken, requireRole(['barbero']), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+
+    // Verificar que la reserva pertenece al barbero
+    const reservaCheck = await pool.query(`
+      SELECT r.* FROM reservas r
+      JOIN barberos b ON r.barbero_id = b.id
+      WHERE r.id = $1 AND b.usuario_id = $2
+    `, [id, userId]);
+
+    if (reservaCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'No tienes permisos para cancelar esta reserva' });
+    }
+
+    const reserva = reservaCheck.rows[0];
+
+    // Actualizar reserva
+    await pool.query(
+      'UPDATE reservas SET estado = $1, fecha_modificacion = CURRENT_TIMESTAMP WHERE id = $2',
+      ['cancelada', id]
+    );
+
+    // Liberar horario
+    await pool.query(`
+      UPDATE horarios SET disponible = true
+      WHERE barbero_id = $1 AND fecha = $2::date
+      AND hora_inicio <= $3::time AND hora_fin > $3::time
+    `, [reserva.barbero_id, reserva.fecha_hora.split('T')[0], reserva.fecha_hora.split('T')[1]]);
+
+    // Notificar al cliente (email y notificación web)
+    const clienteData = await pool.query('SELECT email, nombre FROM usuarios WHERE id = $1', [reserva.usuario_id]);
+    const serviceData = await pool.query('SELECT nombre FROM servicios WHERE id = $1', [reserva.servicio_id]);
+
+    // Crear notificación web
+    await pool.query(
+      'INSERT INTO notificaciones (usuario_id, tipo, titulo, mensaje) VALUES ($1, $2, $3, $4)',
+      [reserva.usuario_id, 'cancelacion', 'Reserva Cancelada por Barbero', 'Tu reserva ha sido cancelada por el barbero debido a imprevistos.']
+    );
+
+    // Enviar email (no bloqueante)
+    try {
+      const fechaFormateada = new Date(reserva.fecha_hora).toLocaleDateString('es-CO');
+      await enviarCancelacionReserva(
+        clienteData.rows[0].email,
+        clienteData.rows[0].nombre,
+        serviceData.rows[0].nombre,
+        fechaFormateada
+      );
+    } catch (e) {
+      console.error('Error enviando email:', e);
+    }
+
+    res.json({ mensaje: 'Reserva cancelada correctamente' });
+  } catch (error) {
+    console.error('Error al cancelar reserva por barbero:', error);
+    res.status(500).json({ error: 'Error al cancelar reserva' });
+  }
+});
+
+// PUT - Cancelar reserva (Admin - Sin restricciones de tiempo)
+app.put('/api/admin/reservas/:id/cancelar', authenticateToken, requireRole(['super_admin']), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const reservaResult = await pool.query('SELECT * FROM reservas WHERE id = $1', [id]);
+    if (reservaResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Reserva no encontrada' });
+    }
+    const reserva = reservaResult.rows[0];
+
+    // Actualizar reserva
+    await pool.query(
+      'UPDATE reservas SET estado = $1, fecha_modificacion = CURRENT_TIMESTAMP WHERE id = $2',
+      ['cancelada', id]
+    );
+
+    // Liberar horario
+    await pool.query(`
+      UPDATE horarios SET disponible = true
+      WHERE barbero_id = $1 AND fecha = $2::date
+      AND hora_inicio <= $3::time AND hora_fin > $3::time
+    `, [reserva.barbero_id, reserva.fecha_hora.split('T')[0], reserva.fecha_hora.split('T')[1]]);
+
+    res.json({ mensaje: 'Reserva cancelada por administrador' });
+  } catch (error) {
+    console.error('Error al cancelar reserva (admin):', error);
     res.status(500).json({ error: 'Error al cancelar reserva' });
   }
 });
@@ -752,9 +885,9 @@ app.put('/api/reservas/:id/reprogramar', authenticateToken, async (req: Request,
     const horarioCheck = await pool.query(`
       SELECT h.* FROM horarios h
       WHERE h.barbero_id = $1 AND h.fecha = $2::date
-      AND h.hora_inicio <= $2::time AND h.hora_fin > $2::time
+      AND h.hora_inicio <= $3::time AND h.hora_fin > $3::time
       AND h.disponible = true
-    `, [reserva.barbero_id, nueva_fecha_hora]);
+    `, [reserva.barbero_id, nueva_fecha_hora.split('T')[0], nueva_fecha_hora.split('T')[1]]);
 
     if (horarioCheck.rows.length === 0) {
       return res.status(409).json({ error: 'El nuevo horario no está disponible' });
@@ -774,8 +907,8 @@ app.put('/api/reservas/:id/reprogramar', authenticateToken, async (req: Request,
     await pool.query(`
       UPDATE horarios SET disponible = true
       WHERE barbero_id = $1 AND fecha = $2::date
-      AND hora_inicio <= $2::time AND hora_fin > $2::time
-    `, [reserva.barbero_id, reserva.fecha_hora]);
+      AND hora_inicio <= $3::time AND hora_fin > $3::time
+    `, [reserva.barbero_id, reserva.fecha_hora.split('T')[0], reserva.fecha_hora.split('T')[1]]);
 
     // Actualizar la reserva
     const result = await pool.query(

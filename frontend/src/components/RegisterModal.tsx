@@ -1,5 +1,6 @@
 // components/RegisterModal.tsx - Register modal component
 import { useState } from 'react';
+import './AuthModals.css';
 
 interface RegisterModalProps {
     onSubmit: (data: RegisterData) => Promise<void>;
