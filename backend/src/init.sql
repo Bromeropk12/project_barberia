@@ -9,8 +9,9 @@
 -- Tabla de usuarios (perfiles adicionales, Stack Auth maneja auth)
 CREATE TABLE IF NOT EXISTS usuarios (
     id SERIAL PRIMARY KEY,
-    stack_auth_id VARCHAR(255) UNIQUE NOT NULL, -- ID de Stack Auth
+    stack_auth_id VARCHAR(255) UNIQUE, -- ID de Stack Auth (opcional para compatibilidad)
     email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255), -- Hash de contraseña para autenticación local
     nombre VARCHAR(100) NOT NULL,
     apellido VARCHAR(100) NOT NULL,
     telefono VARCHAR(20),
@@ -99,9 +100,9 @@ CREATE INDEX IF NOT EXISTS idx_notificaciones_usuario ON notificaciones(usuario_
 
 -- Usuario Super Admin (crear manualmente o vía Stack Auth)
 -- NOTA: El stack_auth_id debe obtenerse de Stack Auth después del registro
-INSERT INTO usuarios (stack_auth_id, email, nombre, apellido, telefono, rol) VALUES
-('super_admin_stack_id', 'admin@barberia.com', 'Super', 'Admin', '3000000000', 'super_admin')
-ON CONFLICT (stack_auth_id) DO NOTHING;
+INSERT INTO usuarios (email, password_hash, nombre, apellido, telefono, rol) VALUES
+('admin@barberia.com', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Super', 'Admin', '3000000000', 'super_admin')
+ON CONFLICT (email) DO NOTHING;
 
 -- Servicios básicos
 INSERT INTO servicios (nombre, descripcion, precio, duracion_min) VALUES

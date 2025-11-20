@@ -22,6 +22,7 @@ interface Servicio {
   descripcion?: string;
   precio: number;
   duracion_min: number;
+  activo?: boolean;
 }
 
 interface Barbero {
@@ -55,7 +56,7 @@ interface Horario {
   disponible: boolean;
 }
 
-type AdminSubView = 'reservas' | 'barberos' | 'servicios';
+type AdminSubView = 'reservas' | 'barberos' | 'servicios' | 'estadisticas';
 
 // Configurar axios para incluir token JWT
 axios.interceptors.request.use((config) => {
@@ -81,6 +82,7 @@ function App() {
   const [currentView, setCurrentView] = useState<string>('landing');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  const [globalError, setGlobalError] = useState<string>('');
 
   // Estados para el flujo de reserva
   const [servicios, setServicios] = useState<Servicio[]>([]);
@@ -94,8 +96,12 @@ function App() {
   const [selectedHorario, setSelectedHorario] = useState<Horario | null>(null);
   const [selectedFecha, setSelectedFecha] = useState<string>('');
 
+  // Estados para estadísticas
+  const [estadisticas, setEstadisticas] = useState<any>(null);
+
   // Estados para sub-vistas
   const [adminSubView, setAdminSubView] = useState<AdminSubView>('reservas');
+  const [barberoSubView, setBarberoSubView] = useState<string>('reservas');
 
   // Estados para login/registro
   const [loginData, setLoginData] = useState({ email: '', password: '' });
@@ -159,22 +165,52 @@ function App() {
       setServicios(serviciosRes.data);
       setBarberos(barberosRes.data);
       setReservas(reservasRes.data);
+
+      // Cargar estadísticas si es admin
+      if (currentUser?.rol === 'super_admin') {
+        const statsRes = await axios.get(`${API_BASE_URL}/estadisticas`);
+        setEstadisticas(statsRes.data);
+      }
     } catch (err) {
       console.error('Error cargando datos iniciales:', err);
     }
   };
 
-  // Funciones de autenticación (simuladas para Stack Auth)
+  // Funciones de autenticación con validaciones
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
+    // Validaciones
+    if (!loginData.email.trim()) {
+      setError('El email es obligatorio');
+      setLoading(false);
+      return;
+    }
+
+    if (!loginData.password.trim()) {
+      setError('La contraseña es obligatoria');
+      setLoading(false);
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(loginData.email)) {
+      setError('Formato de email inválido');
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Aquí iría la integración real con Stack Auth
-      // Por ahora, simulamos con un token hardcodeado
-      const mockToken = 'mock_jwt_token_for_development';
-      localStorage.setItem('auth_token', mockToken);
+      // Login con API local
+      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
+        email: loginData.email.trim(),
+        password: loginData.password
+      });
+
+      const token = response.data.access_token;
+      localStorage.setItem('auth_token', token);
 
       // Cargar perfil después del login
       await loadUserProfile();
@@ -198,8 +234,14 @@ function App() {
     }
 
     try {
-      // Aquí iría el registro con Stack Auth
-      alert('Registro simulado - En producción usarías Stack Auth');
+      // Registro con API local
+      await axios.post(`${API_BASE_URL}/auth/register`, {
+        name: `${registerData.nombre} ${registerData.apellido}`,
+        email: registerData.email,
+        password: registerData.password,
+        phone: registerData.telefono
+      });
+
       // Después del registro, hacer login automático
       await handleLogin({ preventDefault: () => {} } as any);
     } catch (err: any) {
@@ -299,6 +341,60 @@ function App() {
       loadInitialData();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error cancelando reserva');
+    }
+  };
+
+  const reprogramarReserva = async (reserva: Reserva) => {
+    const nuevaFecha = prompt('Ingresa la nueva fecha (YYYY-MM-DD):');
+    const nuevaHora = prompt('Ingresa la nueva hora (HH:MM):');
+
+    if (!nuevaFecha || !nuevaHora) return;
+
+    const nuevaFechaHora = `${nuevaFecha}T${nuevaHora}`;
+
+    try {
+      await axios.put(`${API_BASE_URL}/reservas/${reserva.id}/reprogramar`, {
+        nueva_fecha_hora: nuevaFechaHora
+      });
+      alert('Reserva reprogramada exitosamente');
+      loadInitialData();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error reprogramando reserva');
+    }
+  };
+
+  // Funciones de administración
+  const editarBarbero = (barbero: Barbero) => {
+    // Implementar edición de barbero
+    alert('Funcionalidad de edición pendiente');
+  };
+
+  const eliminarBarbero = async (barberoId: number) => {
+    if (!confirm('¿Estás seguro de desactivar este barbero?')) return;
+
+    try {
+      await axios.delete(`${API_BASE_URL}/barberos/${barberoId}`);
+      alert('Barbero desactivado');
+      loadInitialData();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error desactivando barbero');
+    }
+  };
+
+  const editarServicio = (servicio: Servicio) => {
+    // Implementar edición de servicio
+    alert('Funcionalidad de edición pendiente');
+  };
+
+  const eliminarServicio = async (servicioId: number) => {
+    if (!confirm('¿Estás seguro de desactivar este servicio?')) return;
+
+    try {
+      await axios.delete(`${API_BASE_URL}/servicios/${servicioId}`);
+      alert('Servicio desactivado');
+      loadInitialData();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error desactivando servicio');
     }
   };
 
@@ -468,6 +564,12 @@ function App() {
 
       <main className="dashboard-content">
         {error && <div className="error-banner">{error}</div>}
+        {globalError && (
+          <div className="global-error-banner">
+            <span>{globalError}</span>
+            <button onClick={() => setGlobalError('')} className="error-close">×</button>
+          </div>
+        )}
 
         {currentView === 'dashboard' && (
           <div className="dashboard-overview">
@@ -580,7 +682,10 @@ function App() {
                   <p>Fecha: {new Date(reserva.fecha_hora).toLocaleString()}</p>
                   <p>Estado: {reserva.estado}</p>
                   {reserva.estado === 'confirmada' && (
-                    <button onClick={() => cancelarReserva(reserva.id)}>Cancelar</button>
+                    <div className="reserva-actions">
+                      <button onClick={() => reprogramarReserva(reserva)}>Reprogramar</button>
+                      <button onClick={() => cancelarReserva(reserva.id)}>Cancelar</button>
+                    </div>
                   )}
                 </div>
               ))}
@@ -591,17 +696,36 @@ function App() {
         {currentView === 'barbero' && currentUser.rol === 'barbero' && (
           <div className="barbero-panel">
             <h2>Panel de Barbero</h2>
-            <h3>Mis Reservas</h3>
-            <div className="reservas-list">
-              {reservas.map(reserva => (
-                <div key={reserva.id} className="reserva-card">
-                  <h4>{reserva.servicio_nombre}</h4>
-                  <p>Cliente: {reserva.cliente_nombre} {reserva.cliente_apellido}</p>
-                  <p>Fecha: {new Date(reserva.fecha_hora).toLocaleString()}</p>
-                  <p>Estado: {reserva.estado}</p>
-                </div>
-              ))}
+            <div className="barbero-tabs">
+              <button onClick={() => setBarberoSubView('reservas')}>Mis Reservas</button>
+              <button onClick={() => setBarberoSubView('horarios')}>Gestionar Horarios</button>
             </div>
+
+            {barberoSubView === 'reservas' && (
+              <div>
+                <h3>Mis Reservas</h3>
+                <div className="reservas-list">
+                  {reservas.map(reserva => (
+                    <div key={reserva.id} className="reserva-card">
+                      <h4>{reserva.servicio_nombre}</h4>
+                      <p>Cliente: {reserva.cliente_nombre} {reserva.cliente_apellido}</p>
+                      <p>Fecha: {formatDate(reserva.fecha_hora)}</p>
+                      <p>Estado: {reserva.estado}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {barberoSubView === 'horarios' && (
+              <div>
+                <h3>Gestionar Horarios de No Disponibilidad</h3>
+                <div className="horarios-management">
+                  <p>Funcionalidad para bloquear horarios específicos próximamente.</p>
+                  <p>Por ahora, contacta al administrador para gestionar indisponibilidades.</p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -612,6 +736,7 @@ function App() {
               <button onClick={() => setAdminSubView('reservas')}>Reservas</button>
               <button onClick={() => setAdminSubView('barberos')}>Barberos</button>
               <button onClick={() => setAdminSubView('servicios')}>Servicios</button>
+              <button onClick={() => setAdminSubView('estadisticas')}>Estadísticas</button>
             </div>
 
             {adminSubView === 'reservas' && (
@@ -631,8 +756,108 @@ function App() {
               </div>
             )}
 
-            {adminSubView === 'barberos' && <div><h3>Gestión de Barberos</h3><p>Funcionalidad pendiente...</p></div>}
-            {adminSubView === 'servicios' && <div><h3>Gestión de Servicios</h3><p>Funcionalidad pendiente...</p></div>}
+            {adminSubView === 'barberos' && (
+              <div>
+                <h3>Gestión de Barberos</h3>
+                <div className="admin-actions">
+                  <button onClick={() => setCurrentView('crear-barbero')} className="btn btn-primary">
+                    Crear Nuevo Barbero
+                  </button>
+                </div>
+                <div className="barberos-list">
+                  {barberos.map(barbero => (
+                    <div key={barbero.id} className="barbero-admin-card">
+                      <div className="barbero-info">
+                        <h4>{barbero.nombre} {barbero.apellido}</h4>
+                        <p>Email: {barbero.email}</p>
+                        <p>Estado: {barbero.estado}</p>
+                        <p>Experiencia: {barbero.experiencia_anios} años</p>
+                        <p>Turno: {barbero.turno_trabajo}</p>
+                      </div>
+                      <div className="barbero-actions">
+                        <button onClick={() => editarBarbero(barbero)} className="btn btn-secondary">
+                          Editar
+                        </button>
+                        <button onClick={() => eliminarBarbero(barbero.id)} className="btn btn-danger">
+                          Desactivar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {adminSubView === 'servicios' && (
+              <div>
+                <h3>Gestión de Servicios</h3>
+                <div className="admin-actions">
+                  <button onClick={() => setCurrentView('crear-servicio')} className="btn btn-primary">
+                    Crear Nuevo Servicio
+                  </button>
+                </div>
+                <div className="servicios-list">
+                  {servicios.map(servicio => (
+                    <div key={servicio.id} className="servicio-admin-card">
+                      <div className="servicio-info">
+                        <h4>{servicio.nombre}</h4>
+                        <p>{servicio.descripcion}</p>
+                        <p>Precio: ${servicio.precio}</p>
+                        <p>Duración: {servicio.duracion_min} minutos</p>
+                        <p>Estado: {servicio.activo ? 'Activo' : 'Inactivo'}</p>
+                      </div>
+                      <div className="servicio-actions">
+                        <button onClick={() => editarServicio(servicio)} className="btn btn-secondary">
+                          Editar
+                        </button>
+                        <button onClick={() => eliminarServicio(servicio.id)} className="btn btn-danger">
+                          Desactivar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {adminSubView === 'estadisticas' && estadisticas && (
+              <div>
+                <h3>Estadísticas y Reportes</h3>
+                <div className="estadisticas-grid">
+                  <div className="estadistica-card">
+                    <h4>Total de Reservas</h4>
+                    <p className="estadistica-numero">{estadisticas.totalReservas}</p>
+                  </div>
+                  <div className="estadistica-card">
+                    <h4>Ingresos Totales</h4>
+                    <p className="estadistica-numero">${estadisticas.ingresosTotales}</p>
+                  </div>
+                </div>
+
+                <div className="estadisticas-section">
+                  <h4>Servicios Más Populares</h4>
+                  <div className="estadisticas-list">
+                    {estadisticas.serviciosPopulares.map((servicio: any, index: number) => (
+                      <div key={index} className="estadistica-item">
+                        <span>{servicio.nombre}</span>
+                        <span>{servicio.reservas} reservas</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="estadisticas-section">
+                  <h4>Barberos Más Activos</h4>
+                  <div className="estadisticas-list">
+                    {estadisticas.barberosActivos.map((barbero: any, index: number) => (
+                      <div key={index} className="estadistica-item">
+                        <span>{barbero.nombre} {barbero.apellido}</span>
+                        <span>{barbero.reservas} reservas</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>

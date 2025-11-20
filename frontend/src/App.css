@@ -477,6 +477,44 @@ body {
   font-size: 1.1rem;
 }
 
+/* Loading */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-size: 1.2rem;
+  color: var(--primary-color);
+  background: var(--bg-dark);
+}
+
+/* Error Global */
+.global-error-banner {
+  background: #5A2D2D;
+  color: #FFA07A;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #DC143C;
+}
+
+.error-close {
+  background: none;
+  border: none;
+  color: #FFA07A;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 10px;
+}
+
+.error-close:hover {
+  color: #FF6B6B;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .content-wrapper {

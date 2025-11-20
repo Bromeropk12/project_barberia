@@ -41,30 +41,20 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
   }
 
   try {
-    // Verificar token con JWKS
-    const decoded: any = jwt.verify(token, getKey, {
-      algorithms: ['RS256'],
-      issuer: 'https://api.stack-auth.com',
-      audience: 'https://api.stack-auth.com'
-    });
+    // Verificar token JWT estándar
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'default_secret_key');
 
     // Buscar usuario en BD
     const userResult = await pool.query(
-      'SELECT * FROM usuarios WHERE stack_auth_id = $1',
-      [decoded.sub] // sub es el user ID en Stack Auth
+      'SELECT id, email, nombre, apellido, telefono, rol FROM usuarios WHERE id = $1 AND activo = true',
+      [decoded.id]
     );
 
     if (userResult.rows.length === 0) {
-      // Usuario no existe, crearlo como cliente por defecto
-      const newUser = await pool.query(
-        'INSERT INTO usuarios (stack_auth_id, email, nombre, apellido, rol) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [decoded.sub, decoded.email || '', decoded.name?.split(' ')[0] || '', decoded.name?.split(' ')[1] || '', 'cliente']
-      );
-      req.user = newUser.rows[0];
-    } else {
-      req.user = userResult.rows[0];
+      return res.status(401).json({ error: 'Usuario no encontrado' });
     }
 
+    req.user = userResult.rows[0];
     next();
   } catch (error) {
     console.error('Error de autenticación:', error);

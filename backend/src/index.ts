@@ -1,7 +1,11 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 import { pool } from './database';
 import { authenticateToken, requireRole } from './auth';
+import { enviarConfirmacionReserva, enviarCancelacionReserva } from './emailService';
+import { iniciarRecordatorios } from './reminderService';
 
 const app = express();
 const PORT = 3000;
@@ -13,6 +17,118 @@ app.use(express.json()); // Parsear JSON en el body
 // Ruta de prueba
 app.get('/', (req: Request, res: Response) => {
   res.json({ mensaje: 'API de Brookings Barber funcionando correctamente' });
+});
+
+// ===== ENDPOINTS DE AUTENTICACIÓN =====
+
+// POST - Login
+app.post('/api/auth/login', async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email y contraseña son obligatorios' });
+    }
+
+    // Buscar usuario
+    const userResult = await pool.query(
+      'SELECT * FROM usuarios WHERE email = $1 AND activo = true',
+      [email]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
+
+    const user = userResult.rows[0];
+
+    // Verificar contraseña
+    if (!user.password_hash) {
+      return res.status(401).json({ error: 'Método de autenticación no válido' });
+    }
+
+    const validPassword = await bcrypt.compare(password, user.password_hash);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
+
+    // Generar token JWT
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        rol: user.rol,
+        nombre: user.nombre,
+        apellido: user.apellido
+      },
+      process.env.JWT_SECRET || 'default_secret_key',
+      { expiresIn: '24h' }
+    );
+
+    res.json({
+      access_token: token,
+      user: {
+        id: user.id,
+        email: user.email,
+        nombre: user.nombre,
+        apellido: user.apellido,
+        rol: user.rol
+      }
+    });
+  } catch (error) {
+    console.error('Error en login:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+// POST - Registro
+app.post('/api/auth/register', async (req: Request, res: Response) => {
+  try {
+    const { name, email, password, phone } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Nombre, email y contraseña son obligatorios' });
+    }
+
+    // Verificar si el usuario ya existe
+    const existingUser = await pool.query(
+      'SELECT id FROM usuarios WHERE email = $1',
+      [email]
+    );
+
+    if (existingUser.rows.length > 0) {
+      return res.status(409).json({ error: 'El email ya está registrado' });
+    }
+
+    // Hash de la contraseña
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+
+    // Separar nombre y apellido
+    const nameParts = name.split(' ');
+    const nombre = nameParts[0] || '';
+    const apellido = nameParts.slice(1).join(' ') || '';
+
+    // Crear usuario
+    const result = await pool.query(
+      'INSERT INTO usuarios (email, password_hash, nombre, apellido, telefono, rol) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [email, passwordHash, nombre, apellido, phone || null, 'cliente']
+    );
+
+    res.status(201).json({
+      message: 'Usuario registrado exitosamente',
+      user: {
+        id: result.rows[0].id,
+        email: result.rows[0].email,
+        nombre: result.rows[0].nombre,
+        apellido: result.rows[0].apellido,
+        rol: result.rows[0].rol
+      }
+    });
+  } catch (error) {
+    console.error('Error en registro:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
 });
 
 // ===== ENDPOINTS DE USUARIOS =====
@@ -138,6 +254,28 @@ app.put('/api/servicios/:id', authenticateToken, requireRole(['super_admin']), a
   }
 });
 
+// PUT - Actualizar servicio (solo super_admin)
+app.put('/api/servicios/:id', authenticateToken, requireRole(['super_admin']), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { nombre, descripcion, precio, duracion_min, activo } = req.body;
+
+    const result = await pool.query(
+      'UPDATE servicios SET nombre = $1, descripcion = $2, precio = $3, duracion_min = $4, activo = $5 WHERE id = $6 RETURNING *',
+      [nombre, descripcion, precio, duracion_min, activo, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Servicio no encontrado' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error al actualizar servicio:', error);
+    res.status(500).json({ error: 'Error al actualizar servicio' });
+  }
+});
+
 // DELETE - Desactivar servicio (solo super_admin)
 app.delete('/api/servicios/:id', authenticateToken, requireRole(['super_admin']), async (req: Request, res: Response) => {
   try {
@@ -210,6 +348,52 @@ app.post('/api/barberos', authenticateToken, requireRole(['super_admin']), async
   } catch (error) {
     console.error('Error al crear barbero:', error);
     res.status(500).json({ error: 'Error al crear barbero' });
+  }
+});
+
+// PUT - Actualizar barbero (solo super_admin)
+app.put('/api/barberos/:id', authenticateToken, requireRole(['super_admin']), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { turno_trabajo, estado, experiencia_anios, especialidades } = req.body;
+
+    const result = await pool.query(
+      'UPDATE barberos SET turno_trabajo = $1, estado = $2, experiencia_anios = $3, especialidades = $4 WHERE id = $5 RETURNING *',
+      [turno_trabajo, estado, experiencia_anios, especialidades, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Barbero no encontrado' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error al actualizar barbero:', error);
+    res.status(500).json({ error: 'Error al actualizar barbero' });
+  }
+});
+
+// DELETE - Desactivar barbero (solo super_admin)
+app.delete('/api/barberos/:id', authenticateToken, requireRole(['super_admin']), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Verificar que el barbero existe
+    const barberoCheck = await pool.query('SELECT usuario_id FROM barberos WHERE id = $1', [id]);
+    if (barberoCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Barbero no encontrado' });
+    }
+
+    // Cambiar estado a inactivo en lugar de eliminar
+    await pool.query('UPDATE barberos SET estado = $1 WHERE id = $2', ['inactivo', id]);
+
+    // Cambiar rol del usuario de vuelta a cliente
+    await pool.query('UPDATE usuarios SET rol = $1 WHERE id = $2', ['cliente', barberoCheck.rows[0].usuario_id]);
+
+    res.json({ mensaje: 'Barbero desactivado correctamente' });
+  } catch (error) {
+    console.error('Error al desactivar barbero:', error);
+    res.status(500).json({ error: 'Error al desactivar barbero' });
   }
 });
 
@@ -429,11 +613,37 @@ app.post('/api/reservas', authenticateToken, async (req: Request, res: Response)
       [horarioCheck.rows[0].id]
     );
 
-    // Crear notificación
+    // Obtener datos del usuario y servicio para el email
+    const userData = await pool.query('SELECT email, nombre FROM usuarios WHERE id = $1', [userId]);
+    const serviceData = await pool.query('SELECT nombre FROM servicios WHERE id = $1', [servicio_id]);
+    const barberData = await pool.query(
+      'SELECT u.nombre, u.apellido FROM barberos b JOIN usuarios u ON b.usuario_id = u.id WHERE b.id = $1',
+      [barbero_id]
+    );
+
+    // Crear notificación web
     await pool.query(
       'INSERT INTO notificaciones (usuario_id, tipo, titulo, mensaje) VALUES ($1, $2, $3, $4)',
       [userId, 'confirmacion_reserva', 'Reserva Confirmada', 'Tu reserva ha sido confirmada exitosamente']
     );
+
+    // Enviar email de confirmación (no bloqueante)
+    try {
+      const fechaFormateada = new Date(fecha_hora).toLocaleDateString('es-CO');
+      const horaFormateada = new Date(fecha_hora).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+
+      await enviarConfirmacionReserva(
+        userData.rows[0].email,
+        userData.rows[0].nombre,
+        serviceData.rows[0].nombre,
+        `${barberData.rows[0].nombre} ${barberData.rows[0].apellido}`,
+        fechaFormateada,
+        horaFormateada
+      );
+    } catch (emailError) {
+      console.error('Error enviando email de confirmación:', emailError);
+      // No fallar la reserva por error de email
+    }
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -478,16 +688,178 @@ app.put('/api/reservas/:id/cancelar', authenticateToken, async (req: Request, re
       AND hora_inicio <= $2::time AND hora_fin > $2::time
     `, [reserva.barbero_id, reserva.fecha_hora]);
 
-    // Crear notificación
+    // Obtener datos para el email
+    const userData = await pool.query('SELECT email, nombre FROM usuarios WHERE id = $1', [userId]);
+    const serviceData = await pool.query('SELECT nombre FROM servicios WHERE id = $1', [reserva.servicio_id]);
+
+    // Crear notificación web
     await pool.query(
       'INSERT INTO notificaciones (usuario_id, tipo, titulo, mensaje) VALUES ($1, $2, $3, $4)',
       [userId, 'cancelacion', 'Reserva Cancelada', 'Tu reserva ha sido cancelada']
     );
 
+    // Enviar email de cancelación (no bloqueante)
+    try {
+      const fechaFormateada = new Date(reserva.fecha_hora).toLocaleDateString('es-CO');
+
+      await enviarCancelacionReserva(
+        userData.rows[0].email,
+        userData.rows[0].nombre,
+        serviceData.rows[0].nombre,
+        fechaFormateada
+      );
+    } catch (emailError) {
+      console.error('Error enviando email de cancelación:', emailError);
+      // No fallar la cancelación por error de email
+    }
+
     res.json({ mensaje: 'Reserva cancelada correctamente' });
   } catch (error) {
     console.error('Error al cancelar reserva:', error);
     res.status(500).json({ error: 'Error al cancelar reserva' });
+  }
+});
+
+// PUT - Reprogramar reserva
+app.put('/api/reservas/:id/reprogramar', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { nueva_fecha_hora } = req.body;
+    const userId = req.user!.id;
+
+    if (!nueva_fecha_hora) {
+      return res.status(400).json({ error: 'Nueva fecha y hora son obligatorias' });
+    }
+
+    // Verificar que la reserva pertenece al usuario
+    const reservaResult = await pool.query('SELECT * FROM reservas WHERE id = $1 AND usuario_id = $2', [id, userId]);
+    if (reservaResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Reserva no encontrada' });
+    }
+
+    const reserva = reservaResult.rows[0];
+
+    // Verificar que faltan más de 24 horas para la reprogramación
+    const ahora = new Date();
+    const fechaActual = new Date(reserva.fecha_hora);
+    const diffHoras = (fechaActual.getTime() - ahora.getTime()) / (1000 * 60 * 60);
+
+    if (diffHoras < 24) {
+      return res.status(400).json({ error: 'Solo puedes reprogramar hasta 24 horas antes' });
+    }
+
+    // Verificar que el nuevo horario está disponible
+    const horarioCheck = await pool.query(`
+      SELECT h.* FROM horarios h
+      WHERE h.barbero_id = $1 AND h.fecha = $2::date
+      AND h.hora_inicio <= $2::time AND h.hora_fin > $2::time
+      AND h.disponible = true
+    `, [reserva.barbero_id, nueva_fecha_hora]);
+
+    if (horarioCheck.rows.length === 0) {
+      return res.status(409).json({ error: 'El nuevo horario no está disponible' });
+    }
+
+    // Verificar que no hay otra reserva en el nuevo horario
+    const conflictoCheck = await pool.query(
+      'SELECT * FROM reservas WHERE barbero_id = $1 AND fecha_hora = $2 AND estado != $3 AND id != $4',
+      [reserva.barbero_id, nueva_fecha_hora, 'cancelada', id]
+    );
+
+    if (conflictoCheck.rows.length > 0) {
+      return res.status(409).json({ error: 'Ya existe una reserva en el nuevo horario' });
+    }
+
+    // Liberar el horario anterior
+    await pool.query(`
+      UPDATE horarios SET disponible = true
+      WHERE barbero_id = $1 AND fecha = $2::date
+      AND hora_inicio <= $2::time AND hora_fin > $2::time
+    `, [reserva.barbero_id, reserva.fecha_hora]);
+
+    // Actualizar la reserva
+    const result = await pool.query(
+      'UPDATE reservas SET fecha_hora = $1, fecha_modificacion = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
+      [nueva_fecha_hora, id]
+    );
+
+    // Marcar el nuevo horario como no disponible
+    await pool.query(
+      'UPDATE horarios SET disponible = false WHERE id = $1',
+      [horarioCheck.rows[0].id]
+    );
+
+    // Crear notificación
+    await pool.query(
+      'INSERT INTO notificaciones (usuario_id, tipo, titulo, mensaje) VALUES ($1, $2, $3, $4)',
+      [userId, 'reprogramacion', 'Reserva Reprogramada', 'Tu reserva ha sido reprogramada exitosamente']
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error al reprogramar reserva:', error);
+    res.status(500).json({ error: 'Error al reprogramar reserva' });
+  }
+});
+
+// ===== ENDPOINTS DE ESTADÍSTICAS =====
+
+// GET - Estadísticas generales (super_admin)
+app.get('/api/estadisticas', authenticateToken, requireRole(['super_admin']), async (req: Request, res: Response) => {
+  try {
+    // Total de reservas
+    const totalReservas = await pool.query('SELECT COUNT(*) as total FROM reservas');
+
+    // Reservas por mes (últimos 6 meses)
+    const reservasPorMes = await pool.query(`
+      SELECT
+        TO_CHAR(fecha_hora, 'YYYY-MM') as mes,
+        COUNT(*) as cantidad
+      FROM reservas
+      WHERE fecha_hora >= CURRENT_DATE - INTERVAL '6 months'
+      GROUP BY TO_CHAR(fecha_hora, 'YYYY-MM')
+      ORDER BY mes
+    `);
+
+    // Ingresos totales
+    const ingresosTotales = await pool.query(`
+      SELECT COALESCE(SUM(s.precio), 0) as total
+      FROM reservas r
+      JOIN servicios s ON r.servicio_id = s.id
+      WHERE r.estado = 'confirmada'
+    `);
+
+    // Servicios más populares
+    const serviciosPopulares = await pool.query(`
+      SELECT s.nombre, COUNT(r.id) as reservas
+      FROM servicios s
+      LEFT JOIN reservas r ON s.id = r.servicio_id AND r.estado = 'confirmada'
+      GROUP BY s.id, s.nombre
+      ORDER BY reservas DESC
+      LIMIT 5
+    `);
+
+    // Barberos más activos
+    const barberosActivos = await pool.query(`
+      SELECT u.nombre, u.apellido, COUNT(r.id) as reservas
+      FROM usuarios u
+      JOIN barberos b ON u.id = b.usuario_id
+      LEFT JOIN reservas r ON b.id = r.barbero_id AND r.estado = 'confirmada'
+      GROUP BY u.id, u.nombre, u.apellido
+      ORDER BY reservas DESC
+      LIMIT 5
+    `);
+
+    res.json({
+      totalReservas: parseInt(totalReservas.rows[0].total),
+      reservasPorMes: reservasPorMes.rows,
+      ingresosTotales: parseFloat(ingresosTotales.rows[0].total),
+      serviciosPopulares: serviciosPopulares.rows,
+      barberosActivos: barberosActivos.rows
+    });
+  } catch (error) {
+    console.error('Error obteniendo estadísticas:', error);
+    res.status(500).json({ error: 'Error obteniendo estadísticas' });
   }
 });
 
@@ -578,6 +950,9 @@ app.put('/api/notificaciones/:id/leida', authenticateToken, async (req: Request,
     res.status(500).json({ error: 'Error al actualizar notificación' });
   }
 });
+
+// Iniciar sistema de recordatorios
+iniciarRecordatorios();
 
 // Iniciar servidor
 app.listen(PORT, () => {
