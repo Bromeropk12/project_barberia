@@ -1,33 +1,42 @@
 # ✂️ Sistema de Reservas de Barbería - UAN Barber
 
-Una aplicación web completa para gestión de barbería con sistema de reservas en línea, desarrollada con tecnologías modernas.
+Una aplicación web completa para gestión de barbería con sistema de reservas en línea, desarrollada con arquitectura modular y mejores prácticas de desarrollo.
 
 ## 🚀 ¿Qué es este proyecto?
 
-Sistema full-stack que incluye:
+Sistema full-stack enterprise-ready que incluye:
 - **Landing page moderna** con servicios y barberos
 - **Sistema de reservas** con horarios en tiempo real
 - **Panel administrativo** completo para gestión
 - **Autenticación con roles** (cliente, barbero, admin)
 - **Notificaciones por email** y recordatorios automáticos
+- **Arquitectura modular** con componentes reutilizables
+- **Código DRY** (Don't Repeat Yourself) optimizado
 
-##  Arquitectura del Sistema
+## 🏗️ Arquitectura del Sistema
 
 ### Tecnologías utilizadas:
 
 #### Backend (Node.js/Express/TypeScript)
-- **Node.js** - Entorno de ejecución JavaScript
-- **Express** - Framework web minimalista
-- **TypeScript** - Tipado estático para mayor robustez
-- **PostgreSQL (Neon)** - Base de datos serverless
-- **CORS** - Para comunicación frontend-backend
+- **Node.js v18+** - Entorno de ejecución JavaScript
+- **Express 4.18** - Framework web minimalista con middleware
+- **TypeScript 5.3** - Tipado estático avanzado
+- **PostgreSQL (Neon)** - Base de datos serverless con índices optimizados
+- **JWT Authentication** - Autenticación segura con expiración
+- **bcrypt** - Hashing de contraseñas (10 salt rounds)
+- **node-cron** - Programación de tareas automáticas
+- **nodemailer** - Sistema de emails SMTP
+- **CORS** - Configuración segura para comunicación frontend-backend
 
 #### Frontend (React/Vite/TypeScript)
-- **React 18** - Librería para interfaces de usuario
-- **Vite** - Build tool rápido y moderno
-- **TypeScript** - Desarrollo con tipado
-- **Axios** - Cliente HTTP para API calls
-- **CSS3** - Estilos modernos con diseño responsivo
+- **React 18** - Librería para interfaces con hooks modernos
+- **Vite 4.5** - Build tool ultrarrápido con HMR
+- **TypeScript 5.2** - Desarrollo con tipado estricto
+- **React Router DOM 7.9** - Navegación SPA avanzada
+- **Axios 1.6** - Cliente HTTP con interceptores
+- **ESLint + TypeScript** - Linting y calidad de código
+- **CSS3 Modules** - Estilos modulares y responsivos
+- **Componentes reutilizables** con arquitectura DRY
 
 ##  Cómo funciona
 

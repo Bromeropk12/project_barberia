@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useState } from 'react';
 import { Reserva, Barbero, Servicio, AdminSubView } from './types';
 import { SkeletonList, SkeletonStats } from './Skeleton';
 import { CreateBarberModal } from './CreateBarberModal';
 import { CreateServiceModal } from './CreateServiceModal';
+import { useTabNavigation } from './hooks/useTabNavigation';
 import './DashboardAdmin.css';
 
 interface DashboardAdminProps {
@@ -31,33 +31,21 @@ export function DashboardAdmin({
     onCreateService,
     onCancelReserva
 }: DashboardAdminProps) {
-    const navigate = useNavigate();
-    const location = useLocation();
-    const [activeTab, setActiveTab] = useState<AdminSubView>('estadisticas');
     const [showCreateBarber, setShowCreateBarber] = useState(false);
     const [showCreateService, setShowCreateService] = useState(false);
 
-    // Sincronizar tab con la URL
-    useEffect(() => {
-        const path = location.pathname;
-        if (path.includes('/admin/reservas')) {
-            setActiveTab('reservas');
-        } else if (path.includes('/admin/barberos')) {
-            setActiveTab('barberos');
-        } else if (path.includes('/admin/servicios')) {
-            setActiveTab('servicios');
-        } else {
-            setActiveTab('estadisticas');
-            if (path === '/admin' || path === '/admin/') {
-                navigate('/admin/estadisticas', { replace: true });
-            }
-        }
-    }, [location.pathname, navigate]);
+    // Función para convertir tab a path
+    const tabToPath = (tab: AdminSubView) => `/admin/${tab}`;
 
-    const handleTabChange = (tab: AdminSubView) => {
-        setActiveTab(tab);
-        navigate(`/admin/${tab}`);
+    // Función para convertir path a tab
+    const pathToTab = (path: string): AdminSubView => {
+        if (path.includes('/admin/reservas')) return 'reservas';
+        if (path.includes('/admin/barberos')) return 'barberos';
+        if (path.includes('/admin/servicios')) return 'servicios';
+        return 'estadisticas';
     };
+
+    const { activeTab, handleTabChange } = useTabNavigation('estadisticas', tabToPath, pathToTab, '/admin');
 
     return (
         <div className="admin-panel">
