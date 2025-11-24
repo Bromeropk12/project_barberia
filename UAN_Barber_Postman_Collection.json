@@ -1,0 +1,1003 @@
+{
+  "info": {
+    "_postman_id": "f8c9e2a1-b4d5-4e6f-8g7h-9i0j1k2l3m4n5o6p",
+    "name": "UAN Barber API Collection",
+    "description": "Colección completa de endpoints para la API de UAN Barber - Sistema de Reservas de Barbería. Incluye autenticación JWT, gestión de usuarios, servicios, barberos, horarios, reservas, pagos y notificaciones.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "12345678-1234-1234-1234-123456789012",
+    "_collection_link": "https://www.postman.com/collections/f8c9e2a1-b4d5-4e6f-8g7h-9i0j1k2l3m4n5o6p"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string",
+      "description": "URL base del servidor backend"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string",
+      "description": "Token JWT de autenticación"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string",
+      "description": "ID del usuario actual"
+    },
+    {
+      "key": "barber_id",
+      "value": "1",
+      "type": "string",
+      "description": "ID del barbero seleccionado"
+    },
+    {
+      "key": "service_id",
+      "value": "1",
+      "type": "string",
+      "description": "ID del servicio seleccionado"
+    },
+    {
+      "key": "reservation_id",
+      "value": "",
+      "type": "string",
+      "description": "ID de la reserva actual"
+    },
+    {
+      "key": "notification_id",
+      "value": "1",
+      "type": "string",
+      "description": "ID de notificación para testing"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "User-Agent",
+                "value": "PostmanRuntime/7.36.1",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"cliente@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"],
+              "query": [],
+              "variable": []
+            },
+            "description": "Autenticar usuario y obtener token JWT. El token se guarda automáticamente en la variable 'auth_token'."
+          },
+          "response": [
+            {
+              "id": "response_200_login",
+              "name": "Login Exitoso",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/login",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "auth", "login"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"user\": {\n    \"id\": 1,\n    \"email\": \"cliente@example.com\",\n    \"nombre\": \"Juan\",\n    \"apellido\": \"Pérez\",\n    \"rol\": \"cliente\"\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "test_login_success",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('access_token');",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('auth_token', response.access_token);",
+                  "    pm.collectionVariables.set('user_id', response.user.id);",
+                  "    console.log('✅ Token guardado exitosamente');",
+                  "    console.log('User ID:', response.user.id);",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "id": "prerequest_login",
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('🔐 Iniciando autenticación...');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register Cliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Juan Pérez\",\n  \"email\": \"cliente@example.com\",\n  \"password\": \"password123\",\n  \"phone\": \"+57 300 123 4567\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Usuarios",
+      "item": [
+        {
+          "name": "Obtener Perfil",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/usuarios/perfil",
+              "host": ["{{base_url}}"],
+              "path": ["api", "usuarios", "perfil"]
+            }
+          }
+        },
+        {
+          "name": "Actualizar Perfil",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan\",\n  \"apellido\": \"Pérez\",\n  \"telefono\": \"+57 300 123 4567\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/usuarios/perfil",
+              "host": ["{{base_url}}"],
+              "path": ["api", "usuarios", "perfil"]
+            }
+          }
+        },
+        {
+          "name": "Listar Todos los Usuarios (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/usuarios",
+              "host": ["{{base_url}}"],
+              "path": ["api", "usuarios"]
+            }
+          }
+        },
+        {
+          "name": "Cambiar Rol de Usuario (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rol\": \"barbero\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/usuarios/{{user_id}}/rol",
+              "host": ["{{base_url}}"],
+              "path": ["api", "usuarios", "{{user_id}}", "rol"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Servicios",
+      "item": [
+        {
+          "name": "Listar Servicios Activos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/servicios",
+              "host": ["{{base_url}}"],
+              "path": ["api", "servicios"]
+            }
+          }
+        },
+        {
+          "name": "Crear Servicio (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Corte de Cabello\",\n  \"descripcion\": \"Corte moderno con estilo\",\n  \"precio\": 25000,\n  \"duracion_min\": 30\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/servicios",
+              "host": ["{{base_url}}"],
+              "path": ["api", "servicios"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('service_id', response.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actualizar Servicio (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Corte de Cabello Premium\",\n  \"descripcion\": \"Corte moderno con lavado\",\n  \"precio\": 30000,\n  \"duracion_min\": 45,\n  \"activo\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/servicios/{{service_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "servicios", "{{service_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Desactivar Servicio (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/servicios/{{service_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "servicios", "{{service_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Barberos",
+      "item": [
+        {
+          "name": "Listar Barberos Activos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/barberos",
+              "host": ["{{base_url}}"],
+              "path": ["api", "barberos"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.length > 0) {",
+                  "        pm.collectionVariables.set('barber_id', response[0].id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar Barbero Completo (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Carlos Rodríguez\",\n  \"email\": \"barbero@example.com\",\n  \"password\": \"password123\",\n  \"phone\": \"+57 301 987 6543\",\n  \"turno_trabajo\": \"manana\",\n  \"experiencia_anios\": 5,\n  \"especialidades\": \"Cortes modernos\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/barberos/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "barberos", "register"]
+            }
+          }
+        },
+        {
+          "name": "Actualizar Barbero",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"turno_trabajo\": \"tarde\",\n  \"estado\": \"activo\",\n  \"experiencia_anios\": 6,\n  \"especialidades\": \"Cortes modernos y barba\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/barberos/{{barber_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "barberos", "{{barber_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Desactivar Barbero (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/barberos/{{barber_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "barberos", "{{barber_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Horarios",
+      "item": [
+        {
+          "name": "Obtener Horarios de Barbero",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/horarios/{{barber_id}}/2024-12-01",
+              "host": ["{{base_url}}"],
+              "path": ["api", "horarios", "{{barber_id}}", "2024-12-01"]
+            },
+            "description": "Obtener horarios disponibles de un barbero para una fecha específica. Cambia la fecha en la URL según necesites."
+          }
+        },
+        {
+          "name": "Generar Horarios (Admin/Barbero)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barbero_id\": \"{{barber_id}}\",\n  \"fecha_inicio\": \"2024-12-01\",\n  \"fecha_fin\": \"2024-12-31\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/horarios/generar",
+              "host": ["{{base_url}}"],
+              "path": ["api", "horarios", "generar"]
+            }
+          }
+        },
+        {
+          "name": "Bloquear/Desbloquear Horario (Barbero)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"disponible\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/horarios/1/disponibilidad",
+              "host": ["{{base_url}}"],
+              "path": ["api", "horarios", "1", "disponibilidad"]
+            },
+            "description": "Cambia el ID del horario en la URL. disponible: true para desbloquear, false para bloquear."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reservas",
+      "item": [
+        {
+          "name": "Mis Reservas (Cliente)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reservas/mis",
+              "host": ["{{base_url}}"],
+              "path": ["api", "reservas", "mis"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.length > 0) {",
+                  "        pm.collectionVariables.set('reservation_id', response[0].id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reservas de Barbería (Barbero)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reservas/barberia",
+              "host": ["{{base_url}}"],
+              "path": ["api", "reservas", "barberia"]
+            }
+          }
+        },
+        {
+          "name": "Todas las Reservas (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reservas",
+              "host": ["{{base_url}}"],
+              "path": ["api", "reservas"]
+            }
+          }
+        },
+        {
+          "name": "Crear Reserva",
+          "id": "b2c3d4e5-f6g7-8901-bcde-f23456789012",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "User-Agent",
+                "value": "PostmanRuntime/7.36.1",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barbero_id\": \"{{barber_id}}\",\n  \"servicio_id\": \"{{service_id}}\",\n  \"fecha_hora\": \"2024-12-01T10:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservas",
+              "host": ["{{base_url}}"],
+              "path": ["api", "reservas"],
+              "query": [],
+              "variable": []
+            },
+            "description": "Crear una nueva reserva. Asegúrate de que el barbero esté disponible en el horario seleccionado. La reserva se crea en estado 'pendiente'."
+          },
+          "response": [
+            {
+              "id": "response_201_reserva_creada",
+              "name": "Reserva Creada",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/reservas",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "reservas"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Location",
+                  "value": "/api/reservas/123"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"id\": 123,\n  \"usuario_id\": 1,\n  \"barbero_id\": 2,\n  \"servicio_id\": 1,\n  \"fecha_hora\": \"2024-12-01T10:00:00.000Z\",\n  \"estado\": \"pendiente\",\n  \"fecha_creacion\": \"2024-11-24T19:25:00.000Z\",\n  \"fecha_modificacion\": null\n}"
+            },
+            {
+              "id": "response_409_conflicto",
+              "name": "Conflicto de Horario",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/reservas",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "reservas"]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Ya existe una reserva en el slot 1 del servicio\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "test_crear_reserva",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 409]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    pm.test(\"Response has reservation ID\", function () {",
+                  "        const jsonData = pm.response.json();",
+                  "        pm.expect(jsonData).to.have.property('id');",
+                  "    });",
+                  "",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('reservation_id', response.id);",
+                  "    console.log('✅ Reserva creada - ID:', response.id);",
+                  "}",
+                  "",
+                  "if (pm.response.code === 409) {",
+                  "    console.log('⚠️ Conflicto de horario detectado');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "id": "prerequest_crear_reserva",
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('📅 Creando nueva reserva...');",
+                  "console.log('Barbero ID:', pm.collectionVariables.get('barber_id'));",
+                  "console.log('Servicio ID:', pm.collectionVariables.get('service_id'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancelar Reserva (Cliente)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reservas/{{reservation_id}}/cancelar",
+              "host": ["{{base_url}}"],
+              "path": ["api", "reservas", "{{reservation_id}}", "cancelar"]
+            }
+          }
+        },
+        {
+          "name": "Completar Reserva (Barbero)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reservas/{{reservation_id}}/completar",
+              "host": ["{{base_url}}"],
+              "path": ["api", "reservas", "{{reservation_id}}", "completar"]
+            }
+          }
+        },
+        {
+          "name": "Cancelar Reserva por Barbero",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reservas/{{reservation_id}}/cancelar_barbero",
+              "host": ["{{base_url}}"],
+              "path": ["api", "reservas", "{{reservation_id}}", "cancelar_barbero"]
+            }
+          }
+        },
+        {
+          "name": "Reprogramar Reserva",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nueva_fecha_hora\": \"2024-12-02T14:00:00.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservas/{{reservation_id}}/reprogramar",
+              "host": ["{{base_url}}"],
+              "path": ["api", "reservas", "{{reservation_id}}", "reprogramar"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pagos",
+      "item": [
+        {
+          "name": "Procesar Pago",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reserva_id\": \"{{reservation_id}}\",\n  \"metodo\": \"efectivo\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/pagos",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pagos"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notificaciones",
+      "item": [
+        {
+          "name": "Mis Notificaciones",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notificaciones",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notificaciones"]
+            }
+          }
+        },
+        {
+          "name": "Marcar Notificación como Leída",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notificaciones/1/leida",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notificaciones", "1", "leida"]
+            },
+            "description": "Cambia el ID de la notificación en la URL según necesites."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Estadísticas",
+      "item": [
+        {
+          "name": "Estadísticas Generales (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/estadisticas",
+              "host": ["{{base_url}}"],
+              "path": ["api", "estadisticas"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Utilidades",
+      "item": [
+        {
+          "name": "Health Check",
+          "id": "z9y8x7w6-v5u4-3210-zyxw-vu9876543210",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*",
+                "type": "text"
+              },
+              {
+                "key": "User-Agent",
+                "value": "PostmanRuntime/7.36.1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": [""],
+              "query": [],
+              "variable": []
+            },
+            "description": "Verificar que el servidor backend esté funcionando correctamente. Debe retornar un mensaje de confirmación."
+          },
+          "response": [
+            {
+              "id": "response_200_health",
+              "name": "Servidor OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/",
+                  "host": ["{{base_url}}"],
+                  "path": [""]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"mensaje\": \"API de UAN Barber funcionando correctamente\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "test_health_check",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has success message\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.mensaje).to.contain('funcionando correctamente');",
+                  "});",
+                  "",
+                  "console.log('✅ Servidor funcionando correctamente');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "_postman_variable_scope": "environment",
+  "_postman_exported_at": "2024-11-24T19:25:00.000Z",
+  "_postman_exported_using": "Postman/10.20.0"
+}
