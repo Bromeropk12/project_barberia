@@ -24,7 +24,7 @@ export const enviarConfirmacionReserva = async (
     const mailOptions = {
       from: process.env.SMTP_USER,
       to: email,
-      subject: 'Confirmación de Reserva - Brookings Barber',
+      subject: 'Confirmación de Reserva - UAN Barber',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #D4AF37;">Confirmación de Reserva</h2>
@@ -36,10 +36,10 @@ export const enviarConfirmacionReserva = async (
             <p><strong>Fecha:</strong> ${fecha}</p>
             <p><strong>Hora:</strong> ${hora}</p>
           </div>
-          <p>Te esperamos en Brookings Barber.</p>
+          <p>Te esperamos en UAN Barber.</p>
           <p>Si necesitas cancelar o reprogramar, puedes hacerlo hasta 24 horas antes.</p>
           <br>
-          <p>Saludos,<br>Equipo Brookings Barber</p>
+          <p>Saludos,<br>Equipo UAN Barber</p>
         </div>
       `
     };
@@ -63,7 +63,7 @@ export const enviarCancelacionReserva = async (
     const mailOptions = {
       from: process.env.SMTP_USER,
       to: email,
-      subject: 'Cancelación de Reserva - Brookings Barber',
+      subject: 'Cancelación de Reserva - UAN Barber',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #D4AF37;">Cancelación de Reserva</h2>
@@ -75,7 +75,7 @@ export const enviarCancelacionReserva = async (
           </div>
           <p>Puedes hacer una nueva reserva cuando desees.</p>
           <br>
-          <p>Saludos,<br>Equipo Brookings Barber</p>
+          <p>Saludos,<br>Equipo UAN Barber</p>
         </div>
       `
     };
@@ -101,7 +101,7 @@ export const enviarRecordatorio = async (
     const mailOptions = {
       from: process.env.SMTP_USER,
       to: email,
-      subject: 'Recordatorio de Reserva - Brookings Barber',
+      subject: 'Recordatorio de Reserva - UAN Barber',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #D4AF37;">Recordatorio de Reserva</h2>
@@ -115,7 +115,7 @@ export const enviarRecordatorio = async (
           </div>
           <p>¡Te esperamos!</p>
           <br>
-          <p>Saludos,<br>Equipo Brookings Barber</p>
+          <p>Saludos,<br>Equipo UAN Barber</p>
         </div>
       `
     };

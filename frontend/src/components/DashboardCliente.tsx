@@ -1,4 +1,4 @@
-// components/DashboardCliente.tsx - Enhanced Client Dashboard with Modern Components
+// components/DashboardCliente.tsx - Dashboard de cliente mejorado con componentes modernos
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Reserva, User } from './types';

@@ -1,4 +1,4 @@
-// components/ReservaFlow.tsx - Reservation flow component
+// components/ReservaFlow.tsx - Componente de flujo de reserva
 import { Servicio, Barbero, Horario } from './types';
 import { SkeletonCard } from './Skeleton';
 import './ReservaFlow.css';

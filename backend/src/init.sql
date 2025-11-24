@@ -1,4 +1,4 @@
--- Esquema de Base de Datos Completo - PostgreSQL para Brookings Barber
+-- Esquema de Base de Datos Completo - PostgreSQL para UAN Barber
 -- Tabla de usuarios (perfiles adicionales, Stack Auth maneja auth)
 CREATE TABLE IF NOT EXISTS usuarios (
     id SERIAL PRIMARY KEY,

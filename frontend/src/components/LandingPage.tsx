@@ -1,4 +1,4 @@
-// components/LandingPage.tsx - Ultra Modern Landing Page
+// components/LandingPage.tsx - Página de aterrizaje ultra moderna
 import { Servicio, Barbero } from './types';
 import { SkeletonCard } from './Skeleton';
 import './LandingPage.css';

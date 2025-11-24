@@ -3,7 +3,7 @@ import jwksClient from 'jwks-rsa';
 import { Request, Response, NextFunction } from 'express';
 import { pool } from './database';
 
-// JWKS client para Stack Auth
+// JWKS cliente para Stack Auth
 const client = jwksClient({
   jwksUri: 'https://api.stack-auth.com/api/v1/projects/df63ef4e-80a2-4662-8895-351337c7e39f/.well-known/jwks.json'
 });
